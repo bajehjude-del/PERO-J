@@ -35,9 +35,9 @@ export const health = {
   startedAt: Date.now(),
 };
 
-async function indexLedger(ledger) {
+export async function indexLedger(ledger, rpcClient = rpc) {
   // getEvents supports cursor-based pagination; we use ledger range here
-  const res = await rpc.getEvents({
+  const res = await rpcClient.getEvents({
     startLedger: ledger,
     filters: [{ type: "contract" }],
     limit: 200,
@@ -90,7 +90,7 @@ function isExplorerUpdateEvent(ev) {
     return false;
   }
   try {
-    return topic.value()?.sym() === "update";
+    return topic.sym() === "update";
   } catch {
     return false;
   }
