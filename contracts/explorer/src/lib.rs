@@ -189,8 +189,9 @@ impl ExplorerContract {
     /// `init` has not been called yet.
     fn event_seq(env: &Env) -> u64 {
         env.storage()
-            .instance()
+            .persistent()
             .get(&DataKey::EventSeq)
+            .or_else(|| env.storage().instance().get(&DataKey::EventSeq))
             .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
     }
 
@@ -227,7 +228,7 @@ impl ExplorerContract {
             panic_with_error!(&env, Error::AlreadyExists);
         }
         env.storage().persistent().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::EventSeq, &0u64);
+        env.storage().persistent().set(&DataKey::EventSeq, &0u64);
         Self::bump_ttl(&env);
     }
 
@@ -455,7 +456,12 @@ impl ExplorerContract {
         };
         env.storage().persistent().set(&DataKey::EventLog(seq), &event);
         env.storage().persistent().extend_ttl(&DataKey::EventLog(seq), EVENT_TTL_MIN, EVENT_TTL_MAX);
-        env.storage().instance().set(&DataKey::EventSeq, &(seq + 1));
+        env.storage().persistent().set(&DataKey::EventSeq, &(seq + 1));
+        env.storage().persistent().extend_ttl(
+            &DataKey::EventSeq,
+            EVENTSEQ_TTL_THRESHOLD,
+            EVENTSEQ_TTL_BUMP,
+        );
         Self::bump_ttl(&env);
 
         env.events().publish(
@@ -490,7 +496,12 @@ impl ExplorerContract {
         if limit > MAX_PAGE {
             panic_with_error!(&env, Error::LimitExceeded);
         }
-        let total: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
+        let total: u64 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::EventSeq)
+            .or_else(|| env.storage().instance().get(&DataKey::EventSeq))
+            .unwrap_or(0);
         let mut out: Vec<DecodedEvent> = Vec::new(&env);
         let end = from.saturating_add(limit as u64).min(total);
         for seq in from..end {
@@ -507,7 +518,10 @@ impl ExplorerContract {
 mod tests {
     use super::*;
     use soroban_sdk::{
-        testutils::{storage::Instance as _, Address as _, Events as _, Ledger as _},
+        testutils::{
+            storage::{Instance as _, Persistent as _},
+            Address as _, Events as _, Ledger as _,
+        },
         Env, IntoVal, TryFromVal,
     };
 
@@ -854,6 +868,38 @@ mod tests {
         // TTL was pushed well past the 30-day bump threshold.
         let ttl = env.as_contract(&client.address, || env.storage().instance().get_ttl());
         assert!(ttl >= TTL_THRESHOLD, "instance ttl {} not bumped", ttl);
+    }
+
+    #[test]
+    fn test_submit_event_bumps_event_seq_ttl_near_expiry() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let start = env.ledger().sequence();
+        let ttl = env.as_contract(&client.address, || {
+            env.storage().persistent().get_ttl(&DataKey::EventSeq)
+        });
+        env.ledger().with_mut(|l| {
+            l.sequence_number = start + ttl - EVENTSEQ_TTL_THRESHOLD + 1;
+        });
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[8u8; 32]);
+        client.submit_event(
+            &admin,
+            &cid,
+            &symbol_short!("swap"),
+            &1u32,
+            &String::from_str(&env, "refreshes EventSeq"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+
+        assert_eq!(client.event_count(), 1);
+        let ttl = env.as_contract(&client.address, || {
+            env.storage().persistent().get_ttl(&DataKey::EventSeq)
+        });
+        assert!(ttl >= EVENTSEQ_TTL_BUMP, "EventSeq ttl {} not bumped", ttl);
     }
 
     // ── #2 — indexer allowlist ───────────────────────────────────────────────
