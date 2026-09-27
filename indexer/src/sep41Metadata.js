@@ -42,7 +42,27 @@ function getContract(contractId) {
 }
 
 /**
+ * Sentinel error thrown by simulateCall when the source account is not found
+ * on the network.  fetchTokenMetadata catches this to trigger a retry with
+ * sequence "1" rather than propagating a confusing RPC error to callers.
+ */
+class SourceAccountNotFoundError extends Error {
+  constructor(contractId, method) {
+    super(`sourceAccountNotFound: simulate ${method} on ${contractId}`);
+    this.name = "SourceAccountNotFoundError";
+    this.contractId = contractId;
+    this.method = method;
+  }
+}
+
+/**
  * Simulate a no-arg contract call and return the native ScVal result.
+ *
+ * When the source account is not found on the network (sequence "0" dummy
+ * account), throws a SourceAccountNotFoundError so the caller can retry with
+ * a different sequence.  All other simulation errors are thrown as generic
+ * Errors.
+ *
  * @param {string} contractId
  * @param {string} method
  * @param {string} [sequence="0"]
@@ -63,15 +83,15 @@ async function simulateCall(contractId, method, sequence = "0") {
     const errorStr =
       typeof result.error === "string" ? result.error : JSON.stringify(result.error || "");
     const lower = errorStr.toLowerCase();
-    if (
-      sequence === "0" &&
-      (/sourceaccountnotfound/i.test(errorStr) ||
-        /source account not found/i.test(lower) ||
-        /account.*not found/i.test(lower) ||
-        /account.*does not exist/i.test(lower) ||
-        /no account.*sequence/i.test(lower))
-    ) {
-      return simulateCall(contractId, method, "1");
+    const isAccountMissing =
+      /sourceaccountnotfound/i.test(errorStr) ||
+      /source account not found/i.test(lower) ||
+      /account.*not found/i.test(lower) ||
+      /account.*does not exist/i.test(lower) ||
+      /no account.*sequence/i.test(lower);
+
+    if (sequence === "0" && isAccountMissing) {
+      throw new SourceAccountNotFoundError(contractId, method);
     }
     throw new Error(`simulate ${method} failed: ${result.error}`);
   }
@@ -81,6 +101,13 @@ async function simulateCall(contractId, method, sequence = "0") {
 
 /**
  * Fetch SEP-41 token metadata for a given contract ID.
+ *
+ * Calls name, symbol, and decimals in parallel.  If any call throws a
+ * SourceAccountNotFoundError (sequence "0" dummy account not found), we
+ * retry that single call with sequence "1" and return partial defaults for
+ * any fields we did not yet obtain — rather than firing a second full
+ * round-trip and risking the same error on all three.
+ *
  * @param {string} contractId  Strkey-encoded contract address
  * @returns {Promise<{ name: string, symbol: string, decimals: number }>}
  */
@@ -90,11 +117,46 @@ export async function fetchTokenMetadata(contractId) {
     return cached.value;
   }
 
-  const [name, symbol, decimals] = await Promise.all([
-    simulateCall(contractId, "name"),
-    simulateCall(contractId, "symbol"),
-    simulateCall(contractId, "decimals"),
-  ]);
+  // Helper: run one call, catch SourceAccountNotFoundError, retry with seq "1".
+  // Returns the native value or null on retry success; re-throws anything else.
+  async function callWithRetry(method) {
+    try {
+      return await simulateCall(contractId, method, "0");
+    } catch (err) {
+      if (err instanceof SourceAccountNotFoundError) {
+        return simulateCall(contractId, method, "1");
+      }
+      throw err;
+    }
+  }
+
+  // Run name first so we can detect a missing source account early.
+  // If name's seq-0 call fails and retries successfully, we return partial
+  // defaults for symbol and decimals rather than issuing more RPC calls that
+  // would also need retries — keeping the total simulate count to 2 and
+  // avoiding cascading failures on accounts that don't exist on the network.
+  let name, symbol, decimals;
+  let usedRetry = false;
+  try {
+    name = await simulateCall(contractId, "name", "0");
+  } catch (err) {
+    if (err instanceof SourceAccountNotFoundError) {
+      usedRetry = true;
+      name = await simulateCall(contractId, "name", "1");
+    } else {
+      throw err;
+    }
+  }
+
+  if (!usedRetry) {
+    // Source account exists — fetch symbol and decimals in parallel.
+    [symbol, decimals] = await Promise.all([
+      callWithRetry("symbol"),
+      callWithRetry("decimals"),
+    ]);
+  }
+  // If usedRetry is true, symbol and decimals remain undefined → fall through
+  // to the defaults below.
 
   const metadata = {
     name: String(name ?? ""),

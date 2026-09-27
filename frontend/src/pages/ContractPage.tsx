@@ -214,24 +214,24 @@ function RegistrationForm({
             id="reg-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional description"
+            placeholder="Describe what this contract does"
             rows={3}
             style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 6, background: "var(--bg)", color: "var(--fg)", resize: "vertical" }}
           />
         </div>
 
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <label style={{ fontSize: 14, fontWeight: 600 }}>Functions</label>
             <button type="button" onClick={addFunction} style={{ fontSize: 13, padding: "4px 10px" }}>
-              + Add Function
+              + Add function
             </button>
           </div>
           {functions.length === 0 && (
             <p style={{ color: "var(--muted)", fontSize: 13 }}>No functions added yet.</p>
           )}
           {functions.map((fn, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <input
                 type="text"
                 value={fn.name}
@@ -243,10 +243,10 @@ function RegistrationForm({
                 type="text"
                 value={fn.description}
                 onChange={(e) => updateFunction(i, "description", e.target.value)}
-                placeholder="Description (optional)"
+                placeholder="Description"
                 style={{ flex: 2, padding: "6px 10px", border: "1px solid var(--border)", borderRadius: 6, background: "var(--bg)", color: "var(--fg)" }}
               />
-              <button type="button" onClick={() => removeFunction(i)} style={{ padding: "6px 10px", fontSize: 13 }}>
+              <button type="button" onClick={() => removeFunction(i)} style={{ padding: "6px 10px" }}>
                 Remove
               </button>
             </div>
@@ -254,15 +254,15 @@ function RegistrationForm({
         </div>
 
         <button type="submit" disabled={registerMutation.isPending} style={{ alignSelf: "flex-start" }}>
-          {registerMutation.isPending ? "Registering…" : "Register Contract"}
+          {registerMutation.isPending ? "Registering…" : "Register contract"}
         </button>
-      </form>
 
-      {registerMutation.isError && (
-        <p style={{ color: "red", marginTop: 8 }}>
-          {(registerMutation.error as Error).message}
-        </p>
-      )}
+        {registerMutation.isError && (
+          <p style={{ color: "red", fontSize: 13 }}>
+            {(registerMutation.error as Error).message}
+          </p>
+        )}
+      </form>
     </div>
   );
 }

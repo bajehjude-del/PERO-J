@@ -49,6 +49,36 @@ describe("sac", () => {
     assert.equal(sacLabel(usdcContractId), "USDC");
   });
 
+  it("logs malformed assets while registering valid assets and reporting the count", () => {
+    const errors = [];
+    const logs = [];
+    const originalError = console.error;
+    const originalLog = console.log;
+    console.error = (...args) => errors.push(args);
+    console.log = (...args) => logs.push(args.join(" "));
+
+    try {
+      process.env.SAC_ASSETS = JSON.stringify([
+        null,
+        { code: "USDC" },
+        { code: "USDC", issuer: "invalid-issuer" },
+        { code: "USDC", issuer: sampleIssuer },
+      ]);
+      assert.doesNotThrow(() => reloadSacMap());
+    } finally {
+      console.error = originalError;
+      console.log = originalLog;
+    }
+
+    const malformedLogs = errors.filter(([message]) =>
+      message.startsWith("[sac] skipping malformed SAC entry ")
+    );
+    assert.equal(malformedLogs.length, 3);
+    assert.equal(detectSac(usdcContractId).isSac, true);
+    assert.equal(detectSac(NATIVE_CONTRACT_ID).isSac, true);
+    assert.ok(logs.includes("[sac] registered 2 SAC asset(s)"));
+  });
+
   it("handles malformed SAC_ASSETS JSON gracefully without throwing", () => {
     process.env.SAC_ASSETS = "invalid-json-string";
     assert.doesNotThrow(() => reloadSacMap());
@@ -78,23 +108,29 @@ describe("sac", () => {
   it("includes the parse error message in the console.error log (#320)", () => {
     const errors = [];
     const originalError = console.error;
-    console.error = (...args) => errors.push(args.join(" "));
+    console.error = (...args) => errors.push(args);
+    let parseErrorMessage;
 
     try {
       process.env.SAC_ASSETS = "{broken json";
+      try {
+        JSON.parse(process.env.SAC_ASSETS);
+      } catch (err) {
+        parseErrorMessage = err.message;
+      }
       reloadSacMap();
     } finally {
       console.error = originalError;
     }
 
-    // The error message should contain the JSON parse error text
-    const log = errors.find((msg) => msg.includes("[sac] SAC_ASSETS is not valid JSON:"));
-    assert.ok(log, "expected console.error with [sac] SAC_ASSETS prefix");
-    // The error detail (from err.message) must be present, not empty
-    const afterPrefix = log.split("[sac] SAC_ASSETS is not valid JSON:")[1] ?? "";
+    assert.ok(parseErrorMessage, "expected invalid JSON to produce a parse error");
     assert.ok(
-      afterPrefix.trim().length > 0,
-      "expected the parse error message to be appended after the prefix"
+      errors.some((args) =>
+        args.length === 2 &&
+        args[0] === "[sac] SAC_ASSETS is not valid JSON:" &&
+        args[1] === parseErrorMessage
+      ),
+      `expected the parse error message to be logged, got: ${JSON.stringify(errors)}`
     );
   });
 });

@@ -34,6 +34,16 @@ describe("scValToJs", () => {
       );
       assert.equal(scValToJs(val), 18446744073709552116n);
     });
+
+    it("formats the minimum signed 128-bit value without overflow", () => {
+      const val = xdr.ScVal.scvI128(
+        new xdr.Int128Parts({
+          hi: xdr.Int64.fromString("-9223372036854775808"),
+          lo: xdr.Uint64.fromString("0"),
+        })
+      );
+      assert.equal(scValToJs(val).toString(), "-170141183460469231731687303715884105728");
+    });
   });
 
   describe("scvU128", () => {

@@ -453,15 +453,16 @@ impl ExplorerContract {
             raw_topics,
             raw_data,
         };
-        env.storage().persistent().set(&DataKey::EventLog(seq), &event);
-        env.storage().persistent().extend_ttl(&DataKey::EventLog(seq), EVENT_TTL_MIN, EVENT_TTL_MAX);
-        env.storage().instance().set(&DataKey::EventSeq, &(seq + 1));
-        Self::bump_ttl(&env);
 
         env.events().publish(
             (symbol_short!("decoded"), contract_id, function),
             description,
         );
+
+        env.storage().persistent().set(&DataKey::EventLog(seq), &event);
+        env.storage().persistent().extend_ttl(&DataKey::EventLog(seq), EVENT_TTL_MIN, EVENT_TTL_MAX);
+        env.storage().instance().set(&DataKey::EventSeq, &(seq + 1));
+        Self::bump_ttl(&env);
     }
 
     /// Fetch a single decoded event by sequence number.
@@ -562,6 +563,15 @@ mod tests {
             &Bytes::new(&env),
         );
 
+        let (_, topics, data) = env.events().all().last().unwrap();
+        assert_eq!(
+            topics,
+            (symbol_short!("decoded"), cid.clone(), symbol_short!("swap")).into_val(&env),
+        );
+        assert_eq!(
+            String::try_from_val(&env, &data).unwrap(),
+            String::from_str(&env, "Address GABC... swapped 100 USDC → 98.7 XLM on StellarSwap"),
+        );
         assert_eq!(client.event_count(), 1u64);
         let ev = client.get_event(&0u64);
         assert_eq!(ev.ledger, 4521983u32);

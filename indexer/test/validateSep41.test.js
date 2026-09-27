@@ -10,6 +10,7 @@
  *  3. Execution errors       → treated as "present" (function exists, rejected dummy args)
  *  4. Mixed presence         → compliant: false, only present ones true
  *  5. Return shape guarantees
+ *  6. mapWithConcurrency resolves false on mapper errors (no array holes)
  */
 
 import { describe, it } from "node:test";
@@ -41,6 +42,7 @@ SorobanRpc.Server.prototype.simulateTransaction = async function (_tx) {
   return simSuccess();
 };
 
+import { mapWithConcurrency, validateSep41 } from "../src/validateSep41.js";
 import {
   validateSep41,
   mapWithConcurrency,
@@ -138,6 +140,54 @@ describe("validateSep41() — return shape", () => {
   });
 });
 
+describe("mapWithConcurrency() — mapper errors resolve instead of leaving holes", () => {
+  it("resolves false for every slot when the mapper throws", async () => {
+    const results = await mapWithConcurrency([1, 2, 3, 4], 2, async () => {
+      throw new Error("boom");
+    });
+
+    assert.equal(results.length, 4);
+    assert.deepEqual(results, [false, false, false, false]);
+  });
+
+  it("leaves no holes in the result array", async () => {
+    const results = await mapWithConcurrency([1, 2, 3, 4, 5], 3, async (n) => {
+      if (n % 2 === 0) throw new Error("even");
+      return true;
+    });
+
+    // Holes are skipped by every(); a dense array is what makes every() reliable.
+    assert.equal(results.length, 5);
+    for (let i = 0; i < results.length; i += 1) {
+      assert.ok(i in results, `hole at index ${i}`);
+      assert.equal(typeof results[i], "boolean");
+    }
+    assert.deepEqual(results, [true, false, true, false, true]);
+  });
+
+  it("does not reject when a mapper throws", async () => {
+    await assert.doesNotReject(() => mapWithConcurrency([1], 1, async () => {
+      throw new Error("boom");
+    }));
+  });
+});
+
+describe("every(Boolean) — false values are not treated as compliant", () => {
+  it("returns false for an array containing false", () => {
+    assert.equal([true, false, true].every(Boolean), false);
+  });
+
+  it("returns true for an all-true array", () => {
+    assert.equal([true, true, true].every(Boolean), true);
+  });
+
+  it("a failing check makes the contract non-compliant", async () => {
+    _stubbedSimulate = () => {
+      throw new Error("network down");
+    };
+    const { compliant, results } = await validateSep41(CONTRACT_ID);
+    assert.equal(compliant, false);
+    assert.ok(Object.values(results).every((v) => v === false));
 describe("mapWithConcurrency() — mapper error handling", () => {
   it("fills every slot even when the mapper throws for some items", async () => {
     // Mapper succeeds for the first two items and throws for the rest.

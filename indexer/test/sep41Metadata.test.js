@@ -43,10 +43,10 @@ SorobanRpc.Server.prototype.simulateTransaction = async function (_tx) {
 // Import after patching
 import { fetchTokenMetadata } from "../src/sep41Metadata.js";
 
-// Valid contract IDs derived from deterministic seeds 10-15.
+// Valid contract IDs derived from deterministic seeds 10-25.
 // Each test gets its own ID to avoid the module's internal cache leaking
-// between tests.
-const IDS = [10, 11, 12, 13, 14, 15].map((i) =>
+// between tests.  16 slots is enough for the current 7 tests plus future growth.
+const IDS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].map((i) =>
   StrKey.encodeContract(Buffer.alloc(32, i))
 );
 let _idIdx = 0;

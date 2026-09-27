@@ -43,8 +43,8 @@ export default function EventTable({
   }
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
+      <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--muted)" }}>
             <th style={th}>Seq</th>
@@ -124,5 +124,5 @@ export default function EventTable({
   );
 }
 
-const th: React.CSSProperties = { textAlign: "left", padding: "8px 12px", fontWeight: 500 };
+const th: React.CSSProperties = { textAlign: "left", padding: "8px 12px", fontWeight: 500, whiteSpace: "nowrap" };
 const td: React.CSSProperties = { padding: "10px 12px" };

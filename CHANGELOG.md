@@ -8,6 +8,295 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Use GIN index for wallet event queries ([`df010b2`](../../commit/df010b2a97a13e7f6053c8bd84d13fa06e972398))
+
+- Resolve false instead of leaving holes in mapWithConcurrency ([`29d7bb6`](../../commit/29d7bb639d5d3c6270c691c9f658a4a1f4696b7c))
+
+A throwing mapper left its slot in the results array empty, creating a hole.
+  Array.prototype.every skips holes entirely, so a mapper failure was silently
+  reported as compliance.
+
+  - mapWithConcurrency now catches mapper errors and resolves results[i] = false
+  - validateSep41 consumes the returned values instead of mutating a closure,
+    so the error path is actually exercised and results is always dense
+  - tests: throwing mapper yields all-false, no holes, and a failing check
+    forces { compliant: false }
+
+
+- [#865](../../issues/865) Add `WalletPage` document title update on address change ([`8081bc4`](../../commit/8081bc4f11fb84836f91a90d00076c0322885aae))
+
+Closes [#865](../../issues/865)
+
+
+- [#864](../../issues/864) Add `EventPage` with full decoded event detail view ([`cd157e4`](../../commit/cd157e46a1ba2e6130cdb08fa0ded1cd14297c53))
+
+Closes [#864](../../issues/864)
+
+
+- [#863](../../issues/863) Implement `GET /api/events` full-text search with `q` paramete ([`494189c`](../../commit/494189c376665b99ad79c78d25f2c429edc1bd17))
+
+Closes [#863](../../issues/863)
+
+
+- [#862](../../issues/862) Add `fuzz` targets for Rust contract input validation ([`24a333b`](../../commit/24a333bc35a0b2b7d3ba984f773125a367dc712c))
+
+Closes [#862](../../issues/862)
+
+
+- [#853](../../issues/853) Fix `transfer` description to read amount from event data, not ([`a76eb7e`](../../commit/a76eb7e0b47eca0aee194ef01427f033e6af9529))
+
+Closes [#853](../../issues/853)
+
+
+- [#852](../../issues/852) Add `extractAddresses` to collect wallet addresses from events ([`28bb226`](../../commit/28bb2260a33ab87604cb7db7e1145f09d6c47310))
+
+Closes [#852](../../issues/852)
+
+
+- [#851](../../issues/851) Add `isValidStellarAddress` guard to `GET /api/wallet/:address ([`1a795f4`](../../commit/1a795f423dfc4267f1a0126cca27503941ab1a45))
+
+Closes [#851](../../issues/851)
+
+
+- [#850](../../issues/850) Implement `transfer_admin` requiring both parties to sign ([`eba71ae`](../../commit/eba71ae853474c2618ee3ea99df6e24128e55845))
+
+Closes [#850](../../issues/850)
+
+
+- [#849](../../issues/849) Add `stellar.toml` SEP-1 compliant network info file ([`5a6063c`](../../commit/5a6063c8d9d039e44b34990614b011efd5ef250e))
+
+Closes [#849](../../issues/849)
+
+
+- [#848](../../issues/848) Add `GET /api/contracts/:id/events` paginated event history fo ([`40970be`](../../commit/40970be98f70be1e7bd0d322579f05edcc55cf93))
+
+Closes [#848](../../issues/848)
+
+
+- [#847](../../issues/847) Add automated PostgreSQL backup strategy with `pg_dump` ([`10a6843`](../../commit/10a684329b50fa66277fab268b550e050270b3cf))
+
+Closes [#847](../../issues/847)
+
+
+- [#846](../../issues/846) Add CI workflow for React frontend build and tests ([`7241d26`](../../commit/7241d266484372215a436d63011bf92226971ef6))
+
+Closes [#846](../../issues/846)
+
+
+- [#869](../../issues/869) Wrap all async Express handlers with asyncHandler ([`4e5f039`](../../commit/4e5f0393a934bbb58657225c0076a03ba0ec16de))
+
+Closes [#869](../../issues/869)
+
+
+- [#868](../../issues/868) Rename Update button to Update metadata with confirmation dial ([`968c0de`](../../commit/968c0de1e2017be7cf424e7befaee1ce5da49ac6))
+
+Closes [#868](../../issues/868)
+
+
+- [#867](../../issues/867) Add centralised Express error-handling middleware ([`1cd8ede`](../../commit/1cd8edef94c2fd66543fe927b51db67b50bce687))
+
+Closes [#867](../../issues/867)
+
+
+- [#866](../../issues/866) Add `mobile-responsive` CSS for frontend at Tranche 3 launch ([`a29f31e`](../../commit/a29f31e3987a2fb343a14d7e4491661758f5be82))
+
+Closes [#866](../../issues/866)
+
+
+- [#845](../../issues/845) Add CI workflow for Node.js indexer tests ([`d5c3841`](../../commit/d5c384184e7774ea16546858add803e58dc2f0e2))
+
+Closes [#845](../../issues/845)
+
+
+- [#844](../../issues/844) Add CI workflow for Rust contract tests ([`eeacd4f`](../../commit/eeacd4f311aede56c7b58a5c1891f78d9341cad6))
+
+Closes [#844](../../issues/844)
+
+
+- [#843](../../issues/843) Implement `LRU cache eviction` on `update` event from indexer ([`2c0541c`](../../commit/2c0541cfcb609c0378e9f15aef7557d3fd9afff8))
+
+Closes [#843](../../issues/843)
+
+
+- [#842](../../issues/842) Add developer documentation for ABI registration ([`dd315cf`](../../commit/dd315cfaa3542a16c3c470975ef1da0b90c45f61))
+
+Closes [#842](../../issues/842)
+
+
+- [#841](../../issues/841) Add `CONTRIBUTING.md` with PR and issue guidelines ([`ca8891f`](../../commit/ca8891f386adb68d30b9b04822a9af90b8f66254))
+
+Closes [#841](../../issues/841)
+
+
+- [#840](../../issues/840) Add Kubernetes deployment manifests ([`0ee0d54`](../../commit/0ee0d5425c2d8c45235c6605a5f7771423041c58))
+
+Closes [#840](../../issues/840)
+
+
+- [#839](../../issues/839) Add `docker-compose.yml` for local development ([`1f200c0`](../../commit/1f200c0659d7008100a1d8b614c34bec057d1f80))
+
+Closes [#839](../../issues/839)
+
+
+- [#838](../../issues/838) Add `ContractsPage` to list all registered contracts ([`e3e401b`](../../commit/e3e401b11d35d85a6ed67976aa964aa8826caf34))
+
+Closes [#838](../../issues/838)
+
+
+- [#861](../../issues/861) Add `eslint.config.js` and `.prettierrc` to indexer for code c ([`4991adb`](../../commit/4991adb4ac23b82a4c418951937c522b939aa1a1))
+
+Closes [#861](../../issues/861)
+
+
+- [#860](../../issues/860) Add `ContractList` to track all registered contract IDs on-cha ([`b4aa8b8`](../../commit/b4aa8b83d0a8382590a1c7a1a41ea765ecade7b7))
+
+Closes [#860](../../issues/860)
+
+
+- [#859](../../issues/859) Add `SECURITY.md` with admin transfer and emergency recovery p ([`4ba4fb7`](../../commit/4ba4fb7128ca1265d563c9d293799897af213d2a))
+
+Closes [#859](../../issues/859)
+
+
+- [#858](../../issues/858) Add `migrate` target to `Makefile` ([`b1ac0fd`](../../commit/b1ac0fdb37bf6e16cf0c5ef50f5ec7b9d7ede288))
+
+Closes [#858](../../issues/858)
+
+
+- [#837](../../issues/837) Add `GET /api/stats` endpoint for aggregate counts ([`ce54a0e`](../../commit/ce54a0ed5cce84648c13ddbd4640b9d29743dfa2))
+
+Closes [#837](../../issues/837)
+
+
+- [#836](../../issues/836) Add advisory lock to `db.init()` migrations to prevent concurr ([`ed89c74`](../../commit/ed89c7450f72b47589cc8e211c000e9d31d774cb))
+
+Closes [#836](../../issues/836)
+
+
+- [#835](../../issues/835) Remove duplicate `export function startApi` declaration from ` ([`713d2bd`](../../commit/713d2bdfdceda49bc82a6a4f3a456444a9c3419e))
+
+Closes [#835](../../issues/835)
+
+
+- [#834](../../issues/834) `validateContractPayload` must be defined in `api.js` ([`029d6c3`](../../commit/029d6c3fad47712dd9be3aa707a57b2aad880dca))
+
+Closes [#834](../../issues/834)
+
+
+- [#857](../../issues/857) Add `LAG_ALERT_THRESHOLD_S` env var to override health alert t ([`65f7274`](../../commit/65f7274fa0526d8b16ce92df954231e695d8bf59))
+
+Closes [#857](../../issues/857)
+
+
+- [#856](../../issues/856) Add `EventTable` empty state with custom message and subtitle ([`bf8b9bb`](../../commit/bf8b9bbe13c14cc2b66f0878a842e00f7bb98237))
+
+Closes [#856](../../issues/856)
+
+
+- [#855](../../issues/855) Add `NOT_REGISTERED_TTL_MS` short-cache for negative ABI looku ([`a8c99e1`](../../commit/a8c99e146ff5bc04b1f63faabbe80b1e3db234f3))
+
+Closes [#855](../../issues/855)
+
+
+- [#854](../../issues/854) Cap `getEvents` limit at `MAX_PAGE (200)` in the database laye ([`1d6d32f`](../../commit/1d6d32f3cadb22a2a02ffe6ddb3c2eb5a8eb8597))
+
+Closes [#854](../../issues/854)
+
+
+- [#833](../../issues/833) Register StellarSwap, Blend, and Phoenix ABI fixtures on start ([`e0ff17e`](../../commit/e0ff17e96b7457fae0c2abcba1c4217f87c6916c))
+
+Closes [#833](../../issues/833)
+
+
+- [#832](../../issues/832) Add `swap` case to `buildDescription()` ([`aaeee9a`](../../commit/aaeee9a67d50a44b6a0b869bf1adc241424c1f3f))
+
+Closes [#832](../../issues/832)
+
+
+- [#831](../../issues/831) Add `stake` and `unstake` cases to `buildDescription()` ([`3112846`](../../commit/3112846cb96f20ee3e588d2c9383ee4409de49b2))
+
+Closes [#831](../../issues/831)
+
+
+- [#830](../../issues/830) Add `approve` case to `buildDescription()` ([`9de8a62`](../../commit/9de8a628f7b9782057c4902a0ff96e9bb79e099e))
+
+Closes [#830](../../issues/830)
+
+
+- Use npm install instead of npm ci for frontend ([`d861fa5`](../../commit/d861fa5e74f0747a510b5bafaa4f363296cfac61))
+
+vitest@4.1.11 bundles its own vite which requires esbuild ^0.27.0||^0.28.0,
+  while the outer vite@5.3.1 requires esbuild ^0.21.3. These ranges don't
+  overlap so Linux npm resolves them into separate nested installs, producing
+  platform-specific lock file entries that a macOS-generated lock file omits.
+
+  Switching to npm install lets the resolver handle this correctly on each
+  platform without requiring a Linux-generated lock file in the repo
+
+
+- Regenerate frontend package-lock.json and pin node-version to 20.x ([`3f5f440`](../../commit/3f5f440429f26c8f972d1b2eb56d6e475af5c264))
+
+The frontend CI was failing with 'npm ci can only install packages when
+  package.json and package-lock.json are in sync' because package-lock.json
+  was missing esbuild@0.28.2 and all its platform-specific packages.
+
+  Regenerate package-lock.json by running npm install fresh. Also add npm
+  cache configuration (cache: 'npm') and pin node-version to '20.x' (string
+  form) so setup-node resolves the latest Node 20 patch rather than the
+  bare integer which can be ambiguous on newer runners
+
+
+- Resolve issues [#784](../../issues/784), [#785](../../issues/785), [#786](../../issues/786), [#787](../../issues/787) ([`5ac5e5a`](../../commit/5ac5e5a6dd9dfa83ea6d4bf7d2d5e243502a6a22))
+
+[#787](../../issues/787) — db.getContracts() LIMIT/OFFSET parameter indexing
+  - Replace fragile $${params.length+1}/+2 arithmetic with explicit push
+    into selectParams so $N indices are always correct regardless of how
+    many WHERE conditions precede LIMIT/OFFSET.
+  - Add regression test in db.test.js asserting $1/$2/$3 positions when
+    q, page, and limit are all provided.
+  - Add route-level regression test in api.contracts.test.js confirming
+    GET /api/contracts?q=swap&page=2&limit=10 forwards all three opts.
+
+  [#786](../../issues/786) — Full-text search index on events.description
+  - Migration 5 (already present) adds description_tsv TSVECTOR GENERATED
+    ALWAYS AS (to_tsvector('english', description)) STORED and GIN index
+    idx_events_description_tsv.
+  - getEvents() now branches on isWordSafe (/^[\w\s]+$/) to use
+    description_tsv @@ plainto_tsquery('english', $N) for plain-word
+    queries (index scan) and falls back to ILIKE for special-char queries.
+  - Fixes the four pre-existing failing tests in db.test.js ([#321](../../issues/321) block).
+
+  [#785](../../issues/785) — Validate POST /api/contracts payload before upsert
+  - Define and export validateContractPayload() in api.js: id required
+    non-empty string, name required non-empty string, functions optional
+    but must be array when present. Returns null for valid payloads.
+  - Add api.contracts.post.test.js with 13 unit tests for the helper and
+    9 HTTP integration tests covering all acceptance criteria (400 for
+    missing id/name, 400 for non-array functions, 201 for valid payload).
+
+  [#784](../../issues/784) — sourceAccountNotFound retry in sep41Metadata simulation
+  - Add SourceAccountNotFoundError sentinel class; simulateCall throws it
+    instead of recursing when seq=0 and the RPC reports account missing.
+  - fetchTokenMetadata calls name sequentially first; on catch retries
+    name with seq=1 and returns partial defaults for symbol/decimals
+    (exactly 2 simulate calls, no cascading retries).
+  - OPERATIONAL_ACCOUNT env var overrides dummy source; warning already
+    logged on non-testnet fallback.
+  - Fix IDS pool exhaustion in sep41Metadata.test.js (6 → 16 entries).
+
+  Additional CI fixes (pre-existing failures):
+  - decoder.js: add buildDescription handlers for supply, borrow, repay,
+    liquidate, deposit, withdraw.
+  - decoder.test.js: declare C14–C20; move approve to C19 and
+    transfer_from to C20 to eliminate LRU cache collisions.
+  - api.js: implement GET /api/events/:seq/raw route (was tested but
+    missing); registered before /:seq to prevent route shadowing.
+
+
+- Address issues 768, 770, 771, 772 ([`4e054d0`](../../commit/4e054d036c69101d9d019fed8d93c7f11d46ffc2))
+
+- Harden SAC parsing and signed SCVal decoding ([`ee19d80`](../../commit/ee19d806125d9177d51541bcc721dcefb8c56cc5))
+
 - React keys, search query, and debounce in EventTable and Home ([`b3be6a2`](../../commit/b3be6a2cc8b51288676a183ef53944eafffeea16))
 
 - EventTable.tsx ([#303](../../issues/303)): wrap each event pair in <React.Fragment key={ev.seq}>
@@ -623,7 +912,94 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 
+### CI / CD
+
+- Fix frontend Node and lockfile ([`bbf0ec1`](../../commit/bbf0ec1ae4733eb5bde2275dbc0e60b3e50d558d))
+
+
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`281650d`](../../commit/281650dbbc5ed8a30b2e82d8ba39549e65c26f76))
+
+- Auto-update CHANGELOG.md [skip ci] ([`1e2ac6a`](../../commit/1e2ac6a638e96e404aafb821ec18e96cd469bccc))
+
+- Auto-update CHANGELOG.md [skip ci] ([`05f4eda`](../../commit/05f4edac9aa8370cb1614b05644c9d06197a0164))
+
+- Auto-update CHANGELOG.md [skip ci] ([`f73f414`](../../commit/f73f414ab11985b7e7e0b8c8f8d7ec02c435b809))
+
+- Note [#803](../../issues/803) RPC client recreation already implemented ([`cb5671e`](../../commit/cb5671eb67d5947298715e066b25f15d80c67d41))
+
+- Note [#801](../../issues/801) GET /api/contracts already implemented ([`23dfd3d`](../../commit/23dfd3d7a86b67b47d9b79fd0162c3f5f79cc0da))
+
+- Note [#800](../../issues/800) EventTable stable keys already implemented ([`9fabe3f`](../../commit/9fabe3f40e51cdac03fa881c07ac12ffb148f957))
+
+- Auto-update CHANGELOG.md [skip ci] ([`ed86ee1`](../../commit/ed86ee159751eebede0327182ac2be5bd1fb252e))
+
+- Note [#799](../../issues/799) ContractPage events guard already present ([`f62fbf2`](../../commit/f62fbf2eaf909da89bafa03985b27e5c69a25800))
+
+- Note [#798](../../issues/798) WalletPage Next button already fixed ([`7d6649c`](../../commit/7d6649c48391cfb06710f34c640426da92d4dbba))
+
+- Note [#797](../../issues/797) event count summary already implemented ([`73885db`](../../commit/73885dba5fe594c8f9439d199b1844ba605df7da))
+
+- Note [#796](../../issues/796) function filter dropdown already implemented ([`b58be92`](../../commit/b58be92898ff90a15ae7671b78ca64a07a0c4e11))
+
+- Auto-update CHANGELOG.md [skip ci] ([`bbe2429`](../../commit/bbe2429b4ac4a5f85ee6f9cb7dca3929a80d5035))
+
+- Note [#807](../../issues/807) already implemented ([`c988b2e`](../../commit/c988b2e357ab196b708620ba8411ee470dbf1832))
+
+- Note [#806](../../issues/806) already implemented ([`f68ad73`](../../commit/f68ad7333a66f061e35b2338f9d675c912227aa1))
+
+- Note [#805](../../issues/805) already implemented ([`59a0af9`](../../commit/59a0af9f348e4bfbd04c61674ec2c40b123c0296))
+
+- Note [#804](../../issues/804) already implemented ([`fb888a0`](../../commit/fb888a031d6aea7289982a8b3a63200d378a5aba))
+
+- Auto-update CHANGELOG.md [skip ci] ([`d93f7e2`](../../commit/d93f7e2f38ddd854523b1484c8a321920a0907fd))
+
+- Note [#811](../../issues/811) is already implemented on main ([`35bf3f8`](../../commit/35bf3f8429c0679a9578cf015712a744e24733af))
+
+- Note [#810](../../issues/810) is already implemented on main ([`be133e2`](../../commit/be133e28ee18659e49e40f6a2f25f1132af1bb9d))
+
+- Note [#809](../../issues/809) is already implemented on main ([`4dbfb9a`](../../commit/4dbfb9a94f8cb77ad34a631a53cc780722e2ed5c))
+
+- Note [#808](../../issues/808) is already implemented on main ([`cb3631e`](../../commit/cb3631ede028afbcbcfaa4dfb9b9d772d9ef58e4))
+
+- Auto-update CHANGELOG.md [skip ci] ([`c842703`](../../commit/c842703040a0af99c594bcca29d249461deebb31))
+
+- Note [#795](../../issues/795) search debounce already implemented ([`a1fa90f`](../../commit/a1fa90f78288aeda1f1997b639d187bd4fe80bd5))
+
+- Note [#794](../../issues/794) skeleton loading states already implemented ([`7f0ad23`](../../commit/7f0ad23ebd8b4f32980d2c1510a3d5841c8bba73))
+
+- Note [#793](../../issues/793) CopyButton ariaLabel already implemented ([`943178e`](../../commit/943178e11116434ba982c3652601c62ee3d9d8da))
+
+- Note [#792](../../issues/792) seq validation already implemented ([`57cc1b9`](../../commit/57cc1b9250d1e01f4894d4e7752ddee90dc3f47c))
+
+- Auto-update CHANGELOG.md [skip ci] ([`575e7aa`](../../commit/575e7aa730deefdff79a597dd7cd4aae0647b84c))
+
+- Auto-update CHANGELOG.md [skip ci] ([`c9644e4`](../../commit/c9644e49f02312e55fd077acca057d2f69056ef9))
+
+- Auto-update CHANGELOG.md [skip ci] ([`f79a97a`](../../commit/f79a97a5f7c033a4b45ee860305c9c5367401732))
+
+- Auto-update CHANGELOG.md [skip ci] ([`6a9d89f`](../../commit/6a9d89faed6d3d169ba21e40ffcfaee6f46217a0))
+
+- Auto-update CHANGELOG.md [skip ci] ([`ce2cd15`](../../commit/ce2cd157445fc59f2aa2d2d5ea902c0442e7a51c))
+
+- Auto-update CHANGELOG.md [skip ci] ([`b197139`](../../commit/b197139bd49727392a3a8c231954b8aa638444a8))
+
+- Auto-update CHANGELOG.md [skip ci] ([`5ea7331`](../../commit/5ea7331f6945c1c6fae810de41c7ab73b79354cb))
+
+- Auto-update CHANGELOG.md [skip ci] ([`dc23c01`](../../commit/dc23c01989eab5d84c36756240d38569e93c307a))
+
+- Auto-update CHANGELOG.md [skip ci] ([`502ba1b`](../../commit/502ba1bb354c0ed9ca52510de8c058bcf5f026d6))
+
+- Auto-update CHANGELOG.md [skip ci] ([`a449e58`](../../commit/a449e5893782c0d039f580232e000354786ac766))
+
+- Auto-update CHANGELOG.md [skip ci] ([`18dd8bc`](../../commit/18dd8bc8e62397d3214ed568210dfdad84a5c102))
+
+- Auto-update CHANGELOG.md [skip ci] ([`96a9e2f`](../../commit/96a9e2f17eacca410517e110ddf0c89667daf6a5))
+
+- Auto-update CHANGELOG.md [skip ci] ([`2134a57`](../../commit/2134a57a69b3d086225f3affb7c0b5c40668a63a))
+
+- Auto-update CHANGELOG.md [skip ci] ([`6b61255`](../../commit/6b612554c94649052e4a8fdaa4505641221f28d1))
 
 - Auto-update CHANGELOG.md [skip ci] ([`bc83ced`](../../commit/bc83cedd948bcc6a645f6021c5afa2997d56d642))
 
@@ -837,6 +1213,27 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Features
+
+- Add onchain_seq nullable column to events table ([#828](../../issues/828)) ([`02757a5`](../../commit/02757a5ed2e1e4324ee70cf1f8ac8ebefc4e9883))
+
+- onchain_seq BIGINT column declared in migration 1 (CREATE TABLE)
+  - Idempotent ALTER TABLE ADD COLUMN IF NOT EXISTS in migration 2
+  - db.upsertEvent() persists ev.onchain_seq ?? null as $10 parameter
+  - Expand README two-sentence note into a full 'Event sequence namespaces'
+    section with a comparison table documenting seq vs onchain_seq
+
+  Closes [#828](../../issues/828)
+
+
+- Add NotFound page with home link and catch-all route ([#826](../../issues/826)) ([`c5d060f`](../../commit/c5d060f7281b99e531072c641f3eeb2ded023a0b))
+
+- Add NotFound page component with 404 heading and Go to Home link
+  - Text suggests checking the URL and trying again
+  - Use semantic <main> element with aria-labelledby for accessibility
+  - Register catch-all path="*" route in App.tsx to render NotFound
+
+  Closes [#826](../../issues/826)
+
 
 - Document admin key loss recovery, add burn_from decoder, cache invalidation, and volume metadata warning ([`4ded529`](../../commit/4ded5297828e1097f9a0880d91ceb99ae2ffb0ab))
 

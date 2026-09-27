@@ -5,12 +5,21 @@ export default function NotFound() {
   useEffect(() => {
     document.title = "404 Not Found - Soroban Smart Block Explorer";
   }, []);
+
   return (
-    <div style={{ textAlign: "center", padding: "40px 20px" }}>
-      <h1 style={{ fontSize: 48, marginBottom: 16 }}>404 — Page Not Found</h1>
+    <main
+      aria-labelledby="not-found-heading"
+      style={{ textAlign: "center", padding: "40px 20px" }}
+    >
+      <h1
+        id="not-found-heading"
+        style={{ fontSize: 48, marginBottom: 16 }}
+      >
+        404 — Page Not Found
+      </h1>
       <p style={{ fontSize: 18, marginBottom: 24, color: "var(--muted)" }}>
-        The page you are looking for does not exist. Please check the URL and try
-        again.
+        The page you are looking for does not exist. Please check the URL and
+        try again.
       </p>
       <Link
         to="/"
@@ -26,6 +35,6 @@ export default function NotFound() {
       >
         Go to Home
       </Link>
-    </div>
+    </main>
   );
 }
