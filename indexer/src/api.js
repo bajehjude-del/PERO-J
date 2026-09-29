@@ -202,6 +202,22 @@ export function createApp() {
     })
   );
 
+  // GET /api/wallet/:address?page=&limit= — paginated events for a wallet.
+  app.get(
+    "/api/wallet/:address",
+    asyncHandler(async (req, res) => {
+      if (!isValidStellarAddress(req.params.address)) {
+        return res.status(400).json({ error: "Invalid Stellar address" });
+      }
+
+      const result = await db.getWalletEvents(req.params.address, {
+        page: Number(req.query.page) || 1,
+        limit: Number(req.query.limit) || 25,
+      });
+      res.json(result);
+    })
+  );
+
   // GET /api/events/stream — Server-Sent Events endpoint for live event feed
   app.get("/api/events/stream", (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");

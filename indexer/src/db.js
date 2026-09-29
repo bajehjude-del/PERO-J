@@ -323,8 +323,12 @@ export const db = {
    * @returns {Promise<{ events: DecodedEvent[], total: number, page: number, limit: number }>}
    */
   async getWalletEvents(address, { page = 1, limit = 25 } = {}) {
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 25;
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    const pageNum = Number.isFinite(parsedPage) ? Math.max(1, Math.floor(parsedPage)) : 1;
+    const limitNum = Number.isFinite(parsedLimit)
+      ? Math.min(MAX_PAGE, Math.max(1, Math.floor(parsedLimit)))
+      : 25;
     const offset = (pageNum - 1) * limitNum;
 
     const countRes = await pool.query(
