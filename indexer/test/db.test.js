@@ -383,6 +383,17 @@ describe("db.getLeaderboard()", () => {
     assert.ok(sql.includes("LIMIT"));
     assert.equal(params[params.length - 1], 50);
   });
+
+  it("keeps unregistered contracts by falling back to the contract id as the name", async () => {
+    await db.getLeaderboard(10);
+    const { sql } = lastCall();
+    assert.match(sql, /LEFT JOIN/i, "expected a left join so events without contract metadata are kept");
+    assert.match(
+      sql,
+      /COALESCE\(c\.name, e\.contract_id\)/i,
+      "expected a fallback name when the contract metadata is missing"
+    );
+  });
 });
 
 describe("db.get24hVolume()", () => {
