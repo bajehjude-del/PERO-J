@@ -177,6 +177,22 @@ export function createApp() {
     })
   );
 
+  // GET /api/tokens/:id/metadata — SEP-41 token metadata from simulated calls
+  app.get(
+    "/api/tokens/:id/metadata",
+    asyncHandler(async (req, res) => {
+      let metadata;
+      try {
+        metadata = await fetchTokenMetadata(req.params.id);
+      } catch {
+        return res.status(404).json({ error: "Contract is not SEP-41 compliant" });
+      }
+
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      return res.json({ contract_id: req.params.id, ...metadata });
+    })
+  );
+
   // GET /api/leaderboard?limit=10 — top contracts by event volume
   app.get(
     "/api/leaderboard",

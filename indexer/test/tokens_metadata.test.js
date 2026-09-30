@@ -57,6 +57,7 @@ describe("GET /api/tokens/:id/metadata", () => {
     const contractId = nextId();
     const res = await fetch(`${baseUrl}/api/tokens/${contractId}/metadata`);
     assert.equal(res.status, 200);
+    assert.equal(res.headers.get("cache-control"), "public, max-age=3600");
 
     const body = await res.json();
     assert.deepEqual(body, {
