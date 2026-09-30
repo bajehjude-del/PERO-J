@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- [#818](../../issues/818) make database connection pool size configurable via DATABASE_POOL_SIZE ([`91ac58f`](../../commit/91ac58f14f1b1efa80b82caafc2992d092690d45))
+
 - [#747](../../issues/747) `get_events()` must cap `limit` to prevent CPU exhaustion ([`58139bf`](../../commit/58139bfb29c0e0cddc1af6f34af9566a4ccb5a11))
 
 Closes [#747](../../issues/747)
@@ -959,6 +961,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`4f33da4`](../../commit/4f33da42706c10acafb4e1a6c6e4ba0843430220))
 
 - Auto-update CHANGELOG.md [skip ci] ([`c8ad944`](../../commit/c8ad9441917c159da99729fc9c161baf26bd6cda))
 
