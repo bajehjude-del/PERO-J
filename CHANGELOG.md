@@ -24,6 +24,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Address explorer issues 748-751 ([`50aa764`](../../commit/50aa7648b300f7f8fba5fa42f6bd1b1704d04bdc))
 
+- Address indexer issue checks ([`51a9735`](../../commit/51a9735f6018e370f7b8440eebe22e83b0c8f758))
+
+- Address issues 756-759 ([`77f3094`](../../commit/77f309477c5ff8fe9579c06e3a4e9b9806a7908e))
+
+- Refresh EventSeq TTL on submissions ([`6830264`](../../commit/68302648c121eccb97244ce9a129ebbe64dfebf7))
+
+- Add paginated wallet events endpoint ([`d6bfa5d`](../../commit/d6bfa5d135494cda54e16c0044ca5463a2fd9d16))
+
 - Ensure sac_asset column exists ([`355c698`](../../commit/355c698e5db8e17a3162627291835d7ce9e4c0ee))
 
 - Use GIN index for wallet event queries ([`df010b2`](../../commit/df010b2a97a13e7f6053c8bd84d13fa06e972398))
@@ -314,12 +322,6 @@ The frontend CI was failing with 'npm ci can only install packages when
 - Address issues 768, 770, 771, 772 ([`4e054d0`](../../commit/4e054d036c69101d9d019fed8d93c7f11d46ffc2))
 
 - Harden SAC parsing and signed SCVal decoding ([`ee19d80`](../../commit/ee19d806125d9177d51541bcc721dcefb8c56cc5))
-
-- Address indexer issue checks ([`51a9735`](../../commit/51a9735f6018e370f7b8440eebe22e83b0c8f758))
-
-- Address issues 756-759 ([`77f3094`](../../commit/77f309477c5ff8fe9579c06e3a4e9b9806a7908e))
-
-- Refresh EventSeq TTL on submissions ([`6830264`](../../commit/68302648c121eccb97244ce9a129ebbe64dfebf7))
 
 - React keys, search query, and debounce in EventTable and Home ([`b3be6a2`](../../commit/b3be6a2cc8b51288676a183ef53944eafffeea16))
 
@@ -942,6 +944,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`8607095`](../../commit/86070959f45ec1302a00de076575c8b4cb23747b))
 
 - Auto-update CHANGELOG.md [skip ci] ([`3167e8a`](../../commit/3167e8a3b120dc11e07b26f3145f109e05cd5f89))
 
