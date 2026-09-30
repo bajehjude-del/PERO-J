@@ -30,7 +30,7 @@ export function getPoolSize(envVal = process.env.DATABASE_POOL_SIZE) {
   return parsed;
 }
 
-const pool = new pg.Pool({
+export const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   max: getPoolSize(),
   idleTimeoutMillis: 30000,
@@ -42,7 +42,7 @@ const MAX_PAGE = 200;
 function escapeLikePattern(value) {
   return String(value ?? "")
     .replace(/\\/g, "\\\\")
-    .replace(/[\[%_]/g, "\\$&");
+    .replace(/[[%_]/g, "\\$&");
 }
 
 const migrations = [

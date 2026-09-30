@@ -1,12 +1,29 @@
 import { Pool, PoolClient } from 'pg';
 
+const DEFAULT_POOL_SIZE = 20;
+
+export function getPoolSize(envVal: string | undefined = process.env.DATABASE_POOL_SIZE): number {
+  if (envVal === undefined || envVal === null || String(envVal).trim() === '') {
+    return DEFAULT_POOL_SIZE;
+  }
+  const str = String(envVal).trim();
+  const parsed = Number(str);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    console.warn(
+      `Invalid DATABASE_POOL_SIZE "${envVal}". Expected integer between 1 and 100. Falling back to default (${DEFAULT_POOL_SIZE}).`
+    );
+    return DEFAULT_POOL_SIZE;
+  }
+  return parsed;
+}
+
 const MIGRATION_LOCK_ID = 836;
 
 export class Database {
   private pool: Pool;
 
-  constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString });
+  constructor(connectionString: string, maxPoolSize: number = getPoolSize()) {
+    this.pool = new Pool({ connectionString, max: maxPoolSize });
   }
 
   async init(): Promise<void> {

@@ -9,7 +9,7 @@
  * running an actual database.
  */
 
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import pg from "pg";
 
@@ -610,4 +610,133 @@ describe("db.getEvents() full-text search (#321)", () => {
     );
   });
 });
+
+describe("DATABASE_POOL_SIZE / getPoolSize()", () => {
+  let originalWarn;
+  let originalEnv;
+  let warnings;
+
+  beforeEach(() => {
+    originalWarn = console.warn;
+    warnings = [];
+    console.warn = (msg) => warnings.push(msg);
+    originalEnv = process.env.DATABASE_POOL_SIZE;
+  });
+
+  afterEach(() => {
+    console.warn = originalWarn;
+    if (originalEnv === undefined) {
+      delete process.env.DATABASE_POOL_SIZE;
+    } else {
+      process.env.DATABASE_POOL_SIZE = originalEnv;
+    }
+  });
+
+  describe("missing values (defaults to 20 without warning)", () => {
+    it("defaults to 20 when env variable is not set (undefined)", () => {
+      delete process.env.DATABASE_POOL_SIZE;
+      assert.equal(getPoolSize(), 20);
+      assert.equal(getPoolSize(undefined), 20);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("defaults to 20 when passed null", () => {
+      assert.equal(getPoolSize(null), 20);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("defaults to 20 when passed empty string", () => {
+      assert.equal(getPoolSize(""), 20);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("defaults to 20 when passed whitespace-only string", () => {
+      assert.equal(getPoolSize("   "), 20);
+      assert.equal(warnings.length, 0);
+    });
+  });
+
+  describe("valid values (within 1–100)", () => {
+    it("overrides the default when DATABASE_POOL_SIZE env var is set", () => {
+      process.env.DATABASE_POOL_SIZE = "42";
+      assert.equal(getPoolSize(), 42);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("parses valid integer pool sizes", () => {
+      assert.equal(getPoolSize("5"), 5);
+      assert.equal(getPoolSize("20"), 20);
+      assert.equal(getPoolSize("50"), 50);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("accepts lower boundary of 1", () => {
+      assert.equal(getPoolSize("1"), 1);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("accepts upper boundary of 100", () => {
+      assert.equal(getPoolSize("100"), 100);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("handles strings with leading/trailing whitespace", () => {
+      assert.equal(getPoolSize("  15  "), 15);
+      assert.equal(warnings.length, 0);
+    });
+
+    it("handles numeric input directly", () => {
+      assert.equal(getPoolSize(10), 10);
+      assert.equal(warnings.length, 0);
+    });
+  });
+
+  describe("invalid values (outside 1–100 or non-integer)", () => {
+    it("falls back to 20 with warning when value is 0 (< 1)", () => {
+      assert.equal(getPoolSize("0"), 20);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('Invalid DATABASE_POOL_SIZE "0"'));
+      assert.ok(warnings[0].includes("Expected integer between 1 and 100"));
+      assert.ok(warnings[0].includes("Falling back to default (20)"));
+    });
+
+    it("falls back to 20 with warning when value is negative (< 1)", () => {
+      assert.equal(getPoolSize("-5"), 20);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('Invalid DATABASE_POOL_SIZE "-5"'));
+    });
+
+    it("falls back to 20 with warning when value is greater than 100", () => {
+      assert.equal(getPoolSize("101"), 20);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('Invalid DATABASE_POOL_SIZE "101"'));
+    });
+
+    it("falls back to 20 with warning when value is a non-integer float", () => {
+      assert.equal(getPoolSize("5.5"), 20);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('Invalid DATABASE_POOL_SIZE "5.5"'));
+    });
+
+    it("falls back to 20 with warning when value is non-numeric string", () => {
+      assert.equal(getPoolSize("invalid"), 20);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('Invalid DATABASE_POOL_SIZE "invalid"'));
+    });
+
+    it("falls back to 20 with warning when value is NaN or Infinity", () => {
+      assert.equal(getPoolSize("NaN"), 20);
+      assert.equal(getPoolSize("Infinity"), 20);
+      assert.equal(warnings.length, 2);
+    });
+
+    it("falls back to 20 with warning when env var has invalid value outside range", () => {
+      process.env.DATABASE_POOL_SIZE = "999";
+      assert.equal(getPoolSize(), 20);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('Invalid DATABASE_POOL_SIZE "999"'));
+    });
+  });
+});
+
 
