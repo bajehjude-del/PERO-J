@@ -407,3 +407,6 @@ PRs welcome. Please open an issue first for large changes.
 
 <!-- handsoff-issue-850 -->
 - #850: Implement `transfer_admin` requiring both parties to sign
+
+<!-- handsoff-issue-745 -->
+- #745: `init()` must be permanently irreversible after first call

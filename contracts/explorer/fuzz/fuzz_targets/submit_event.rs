@@ -18,6 +18,10 @@ fuzz_target!(|data: &[u8]| {
     // Initialize the contract; ignore errors so fuzzing continues on edge inputs.
     let _ = client.try_initialize(&admin);
 
+    // Exercise the allowlist path: register the caller as an indexer so
+    // submit_event authorization accepts admin OR any allowlisted address.
+    let _ = client.try_add_indexer(&admin, &caller);
+
     // Derive arbitrary description and raw_data sizes from the fuzz input.
     let split = if data.is_empty() { 0 } else { data[0] as usize % (data.len() + 1) };
     let (desc_bytes, raw_bytes) = data.split_at(split);
