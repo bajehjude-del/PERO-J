@@ -8,6 +8,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Add isMissingFunctionError helper to validateSep41.js ([`e0a4cda`](../../commit/e0a4cda6aed51532e91db95396a9ef85ab2dab92))
+
+- isMissingFunctionError(err) is defined and exported, detecting
+    fn_not_found, function not found, no such function, and invalid
+    function error patterns.
+  - validateSep41 correctly returns true for present functions.
+  - Remove duplicate export of mapWithConcurrency that caused a
+    SyntaxError (Duplicate export).
+  - Fix duplicate import and unclosed describe/it blocks in
+    validateSep41.test.js caused by a bad merge.
+
+  Closes [#819](../../issues/819)
+
+
 - Address explorer issues 748-751 ([`50aa764`](../../commit/50aa7648b300f7f8fba5fa42f6bd1b1704d04bdc))
 
 - Ensure sac_asset column exists ([`355c698`](../../commit/355c698e5db8e17a3162627291835d7ce9e4c0ee))
@@ -928,6 +942,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`616702f`](../../commit/616702f6934a56e1f80441936d24811849a0a757))
 
 - Auto-update CHANGELOG.md [skip ci] ([`da5607d`](../../commit/da5607da63529381e11704d54e44b442d021ec5b))
 
