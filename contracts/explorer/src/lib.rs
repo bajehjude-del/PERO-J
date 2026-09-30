@@ -191,6 +191,7 @@ impl ExplorerContract {
         env.storage()
             .persistent()
             .get(&DataKey::EventSeq)
+            .or_else(|| env.storage().instance().get(&DataKey::EventSeq))
             .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
     }
 
@@ -511,7 +512,10 @@ impl ExplorerContract {
 mod tests {
     use super::*;
     use soroban_sdk::{
-        testutils::{storage::Instance as _, Address as _, Events as _, Ledger as _},
+        testutils::{
+            storage::{Instance as _, Persistent as _},
+            Address as _, Events as _, Ledger as _,
+        },
         Env, IntoVal, TryFromVal,
     };
 
