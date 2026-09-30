@@ -3,15 +3,12 @@ kind: ConfigMap
 metadata:
   name: pero-config
   labels:
-    app.kubernetes.io/name: pero-j
+    app.kubernetes.io/part-of: pero
+    app.kubernetes.io/name: pero-config
 data:
-  SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org"
-  HORIZON_URL: "https://horizon-testnet.stellar.org"
-  NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"
-  START_LEDGER: "0"
-  POLL_MS: "5000"
-  PORT: "3001"
-  SAC_ASSETS: "[]"
-  EXPLORER_CONTRACT_ID: ""
-  LAG_ALERT_THRESHOLD_S: "30"
-  VITE_API_PROXY: "http://indexer:3001"
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  INDEXER_PORT: "3001"
+  FRONTEND_PORT: "3000"
+  INDEXER_URL: "http://indexer:3001"
+  RPC_URL: "http://rpc:8545"

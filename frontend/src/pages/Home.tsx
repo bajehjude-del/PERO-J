@@ -34,7 +34,7 @@ export default function Home() {
   const events = data?.events ?? [];
   const total = data?.total ?? 0;
   const limit = data?.limit ?? 25;
-  const hasActiveFilter = Boolean((customFn || fnFilter).trim());
+  const hasActiveFilter = Boolean((customFn || fnFilter || debouncedSearchQuery).trim());
 
   const handleFunctionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;

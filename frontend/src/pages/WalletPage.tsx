@@ -13,11 +13,9 @@ export default function WalletPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (address) {
-      document.title = `Wallet ${address} - Soroban Smart Block Explorer`;
-    } else {
-      document.title = "Wallet History - Soroban Smart Block Explorer";
-    }
+    document.title = address
+      ? `Wallet ${address} - Soroban Smart Block Explorer`
+      : "Wallet History - Soroban Smart Block Explorer";
   }, [address]);
 
   const isValidAddress = StrKey.isValidEd25519PublicKey(address);

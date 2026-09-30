@@ -54,6 +54,34 @@ export function isValidStellarAddress(value) {
   return StrKey.isValidEd25519PublicKey(trimmed) || StrKey.isValidContract(trimmed);
 }
 
+/**
+ * Validates the payload for registering/updating contract ABI metadata.
+ *
+ * @param {unknown} body
+ * @returns {string|null} an error message when invalid, otherwise null
+ */
+export function validateContractPayload(body) {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return "Request body must be a JSON object";
+  }
+
+  const { id, name, functions } = body;
+
+  if (typeof id !== "string" || id.trim() === "") {
+    return "id must be a non-empty string";
+  }
+
+  if (typeof name !== "string" || name.trim() === "") {
+    return "name must be a non-empty string";
+  }
+
+  if (!Array.isArray(functions)) {
+    return "functions must be an array";
+  }
+
+  return null;
+}
+
 export function createApp() {
   const app = express();
   let distinctFunctionsCache = null;
@@ -194,6 +222,30 @@ export function createApp() {
     });
   });
 
+  // GET /api/events/:seq/raw — raw un-decoded topics and data for a single event.
+  // Must be registered BEFORE /api/events/:seq so Express doesn't consume "raw"
+  // as the :seq parameter.
+  app.get(
+    "/api/events/:seq/raw",
+    asyncHandler(async (req, res) => {
+      const seqStr = String(req.params.seq).trim();
+      const seq = parseInt(seqStr, 10);
+      if (isNaN(seq) || seq < 0 || !/^\d+$/.test(seqStr)) {
+        return res.status(400).json({ error: "seq must be a non-negative integer" });
+      }
+      const ev = await db.getEvent(seq);
+      if (!ev) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      res.json({
+        seq: ev.seq,
+        raw_topics: ev.raw_topics,
+        raw_data: ev.raw_data,
+        tx_hash: ev.tx_hash,
+      });
+    })
+  );
+
   // GET /api/events/:seq
   app.get(
     "/api/events/:seq",
@@ -211,6 +263,28 @@ export function createApp() {
     })
   );
 
+  // GET /api/events/:seq/raw — return only the raw event payload fields.
+  app.get(
+    "/api/events/:seq/raw",
+    asyncHandler(async (req, res) => {
+      const seqStr = String(req.params.seq).trim();
+      const seq = parseInt(seqStr, 10);
+      if (isNaN(seq) || seq < 0 || !/^\d+$/.test(seqStr)) {
+        return res.status(400).json({ error: "seq must be a non-negative integer" });
+      }
+      const ev = await db.getEvent(seq);
+      if (!ev) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      res.json({
+        seq: ev.seq,
+        raw_topics: ev.raw_topics,
+        raw_data: ev.raw_data,
+        tx_hash: ev.tx_hash,
+      });
+    })
+  );
+
   // GET /api/contracts?q=&page=&limit= — paginated list of registered contracts,
   // optionally filtered by name/description via case-insensitive search.
   app.get(
@@ -219,6 +293,24 @@ export function createApp() {
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 25;
       const result = await db.getContracts({ q: req.query.q, page, limit });
+      res.json(result);
+    })
+  );
+
+  // GET /api/contracts/:id/events?fn=&page= — paginated event history for a
+  // registered contract, optionally filtered by function name.
+  app.get(
+    "/api/contracts/:id/events",
+    asyncHandler(async (req, res) => {
+      const meta = await db.getContractMeta(req.params.id);
+      if (!meta) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      const result = await db.getEvents({
+        contract: req.params.id,
+        fn: req.query.fn,
+        page: Number(req.query.page) || 1,
+      });
       res.json(result);
     })
   );
@@ -235,9 +327,10 @@ export function createApp() {
     })
   );
 
-  // POST /api/contracts — register ABI metadata
+  // POST /api/contracts — register contract ABI metadata
   app.post(
     "/api/contracts",
+    requireAdminKey,
     asyncHandler(async (req, res) => {
       const validationError = validateContractPayload(req.body);
       if (validationError) {
@@ -254,114 +347,6 @@ export function createApp() {
       }
 
       await db.upsertContractMeta({ ...req.body, registered_by: registeredBy });
-      res.status(201).json({ ok: true });
-    })
-  );
+      res.status(201).json({ ok: true }
 
-  // DELETE /api/contracts/:id — remove contract ABI metadata (admin-authenticated)
-  app.delete(
-    "/api/contracts/:id",
-    requireAdminKey,
-    asyncHandler(async (req, res) => {
-      const existing = await db.getContractMeta(req.params.id);
-      if (!existing) {
-        return res.status(404).json({ error: "Not found" });
-      }
-      await db.deleteContractMeta(req.params.id);
-      res.status(204).send();
-    })
-  );
-
-  // GET /api/wallet/:address
-  app.get(
-    "/api/wallet/:address",
-    asyncHandler(async (req, res) => {
-      const address = req.params.address;
-      if (!isValidStellarAddress(address)) {
-        return res.status(400).json({ error: "Invalid Stellar address" });
-      }
-      const page = Number(req.query.page) || 1;
-      const limit = Number(req.query.limit) || 25;
-      const result = await db.getWalletEvents(address, { page, limit });
-      res.json(result);
-    })
-  );
-
-  // GET /api/tokens/:id/volume — 24-hour rolling transfer volume
-  // Query params:
-  //   decimals (optional, integer) — override the token decimal precision instead of
-  //   fetching it from on-chain metadata / simulation.  Useful when the simulation call
-  //   would add latency or the caller already knows the precision.
-  app.get(
-    "/api/tokens/:id/volume",
-    asyncHandler(async (req, res) => {
-      const contractId = req.params.id;
-
-      // Allow caller to bypass the metadata lookup with an explicit decimals override.
-      let decimals;
-      let metadataWarning = null;
-      if (req.query.decimals !== undefined) {
-        const parsed = parseInt(req.query.decimals, 10);
-        if (isNaN(parsed) || parsed < 0 || parsed > 38) {
-          return res.status(400).json({ error: "decimals must be an integer between 0 and 38" });
-        }
-        decimals = parsed;
-      } else {
-        // Fetch decimals from on-chain metadata (cached via contract registry or live sim)
-        decimals = 7;
-        try {
-          const meta = await fetchTokenMetadata(contractId);
-          decimals = meta.decimals;
-        } catch (err) {
-          console.warn(
-            `[volume] metadata fetch failed for ${contractId} — using default decimals=7:`,
-            err?.message ?? err
-          );
-          metadataWarning = "decimals defaulted to 7";
-        }
-      }
-
-      const volume = await db.get24hVolume(contractId, decimals);
-      res.json({
-        contract_id: contractId,
-        window: "24h",
-        ...volume,
-        ...(metadataWarning ? { metadata_warning: metadataWarning } : {}),
-      });
-    })
-  );
-
-  // GET /api/tokens/:id/metadata — SEP-41 token metadata
-  app.get(
-    "/api/tokens/:id/metadata",
-    asyncHandler(async (req, res) => {
-      const contractId = req.params.id;
-      try {
-        const meta = await fetchTokenMetadata(contractId);
-        res.json({
-          contract_id: contractId,
-          name: meta.name,
-          symbol: meta.symbol,
-          decimals: meta.decimals,
-        });
-      } catch {
-        res.status(404).json({ error: "Token not found or not SEP-41 compliant" });
-      }
-    })
-  );
-
-  app.use((req, res) => {
-    res.status(404).json({ error: "Not found" });
-  });
-
-  app.use(errorHandler);
-
-  return app;
-}
-
-export function startApi(port = Number(PORT)) {
-  const app = createApp();
-  return app.listen(port);
-}
-
-
+/* … truncated 3341 chars — edit only what you need near the top … */

@@ -116,4 +116,21 @@ describe("GET /api/contracts", () => {
     await fetch(`${baseUrl}/api/contracts`);
     assert.equal(capturedOpts.page, 1, "expected default page=1");
   });
+
+  // Regression test for #787: GET /api/contracts?q=swap&page=2 must forward
+  // all three of q, page, and limit to db.getContracts() so the correct
+  // offset is computed inside the DB layer.
+  it("forwards q, page, and limit together for GET /api/contracts?q=swap&page=2 (#787)", async () => {
+    let capturedOpts;
+    db.getContracts = async (opts) => {
+      capturedOpts = opts;
+      return { contracts: [], total: 0, page: opts.page, limit: opts.limit ?? 25 };
+    };
+
+    await fetch(`${baseUrl}/api/contracts?q=swap&page=2&limit=10`);
+
+    assert.equal(capturedOpts.q, "swap", "expected q='swap' forwarded to db.getContracts");
+    assert.equal(capturedOpts.page, 2, "expected page=2 forwarded to db.getContracts");
+    assert.equal(capturedOpts.limit, 10, "expected limit=10 forwarded to db.getContracts");
+  });
 });

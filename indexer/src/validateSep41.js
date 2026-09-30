@@ -96,7 +96,7 @@ async function withRateLimitRetry(fn) {
   }
 }
 
-async function mapWithConcurrency(items, limit, mapper) {
+export async function mapWithConcurrency(items, limit, mapper) {
   const results = new Array(items.length);
   let nextIndex = 0;
 
@@ -107,6 +107,9 @@ async function mapWithConcurrency(items, limit, mapper) {
       try {
         results[currentIndex] = await mapper(items[currentIndex]);
       } catch {
+        // A failing mapper must resolve to a concrete value. Leaving the slot
+        // empty creates a hole in the array, and every() skips holes entirely —
+        // so a throw would silently be reported as compliance.
         // A throwing mapper must never leave a hole in results. Treat the
         // item as non-compliant (false) so the caller's
         // Object.values(results).every(Boolean) check correctly reports the
@@ -158,15 +161,13 @@ async function functionExists(contract, fnName, args) {
  */
 export async function validateSep41(contractId) {
   const contract = new Contract(contractId);
-  const results = {};
 
-  await mapWithConcurrency(SEP41_FUNCTIONS, MAX_CONCURRENT_CHECKS, async ({ name, args }) => {
-    try {
-      results[name] = await functionExists(contract, name, args);
-    } catch {
-      results[name] = false;
-    }
-  });
+  const checks = await mapWithConcurrency(SEP41_FUNCTIONS, MAX_CONCURRENT_CHECKS, ({ name, args }) =>
+    functionExists(contract, name, args),
+  );
+
+  // checks is dense: every slot is a boolean, `false` for any mapper failure.
+  const results = Object.fromEntries(SEP41_FUNCTIONS.map(({ name }, i) => [name, checks[i] === true]));
 
   const compliant = Object.values(results).every(Boolean);
   return { compliant, results };

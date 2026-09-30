@@ -1,48 +1,46 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: indexer
+  name: pero-indexer
   labels:
-    app: indexer
-    app.kubernetes.io/name: pero-indexer
+    app.kubernetes.io/name: pero-j
+    app.kubernetes.io/component: indexer
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: indexer
+      app.kubernetes.io/name: pero-j
+      app.kubernetes.io/component: indexer
   template:
     metadata:
       labels:
-        app: indexer
+        app.kubernetes.io/name: pero-j
+        app.kubernetes.io/component: indexer
     spec:
       containers:
         - name: indexer
-          image: pero-indexer:latest
+          image: pero-j-indexer:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 3001
-              name: http
+            - name: http
+              containerPort: 3001
           envFrom:
             - configMapRef:
                 name: pero-config
             - secretRef:
                 name: pero-secrets
-          livenessProbe:
-            httpGet:
-              path: /ready
-              port: 3001
-            initialDelaySeconds: 10
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
-              port: 3001
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
           resources:
             requests:
               cpu: "100m"
@@ -54,16 +52,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: indexer
+  name: pero-indexer
   labels:
-    app: indexer
-    app.kubernetes.io/name: pero-indexer
+    app.kubernetes.io/name: pero-j
+    app.kubernetes.io/component: indexer
 spec:
   selector:
-    app: indexer
+    app.kubernetes.io/name: pero-j
+    app.kubernetes.io/component: indexer
   ports:
-    - protocol: TCP
+    - name: http
       port: 3001
-      targetPort: 3001
-      name: http
-  type: ClusterIP
+      targetPort: http

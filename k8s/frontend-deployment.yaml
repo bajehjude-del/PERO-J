@@ -6,7 +6,7 @@ metadata:
     app: frontend
     app.kubernetes.io/name: pero-frontend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -20,7 +20,7 @@ spec:
           image: pero-frontend:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - containerPort: 3000
               name: http
           envFrom:
             - configMapRef:
@@ -28,25 +28,25 @@ spec:
           livenessProbe:
             httpGet:
               path: /
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            timeoutSeconds: 3
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 3000
             initialDelaySeconds: 5
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 2
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               cpu: "50m"
               memory: "64Mi"
             limits:
-              cpu: "200m"
+              cpu: "250m"
               memory: "256Mi"
 ---
 apiVersion: v1
@@ -61,7 +61,7 @@ spec:
     app: frontend
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 3000
+      targetPort: 3000
       name: http
   type: ClusterIP

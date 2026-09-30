@@ -49,8 +49,8 @@ const XLM_SAC_ID = new Contract(
 
 // Unique valid contract IDs (derived from deterministic seeds) — one per test
 // so that the 60-second LRU cache in decoder.js never bleeds between tests.
-const [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C17, C18] = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17, 18,
+const [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20] = [
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
 ].map((i) => StrKey.encodeContract(Buffer.alloc(32, i)));
 
 
@@ -84,6 +84,26 @@ describe("decode()", () => {
 
     assert.equal(result.function, "myFunc");
     assert.ok(result.description.includes("myFunc"), "description should contain function name");
+  });
+
+  it("does not stringify contract instance and nonce topics as objects", async () => {
+    db.getContractMeta = async () => null;
+    const contractId = StrKey.encodeContract(Buffer.alloc(32, 19));
+    const contractInstance = xdr.ScVal.scvContractInstance(
+      new xdr.ScContractInstance({
+        executable: xdr.ContractExecutable.contractExecutableWasm(Buffer.alloc(32)),
+        storage: [],
+      })
+    );
+    const nonce = xdr.ScVal.scvLedgerKeyNonce(
+      new xdr.ScNonceKey({ nonce: xdr.Int64.fromString("123") })
+    );
+    const result = await decode(
+      makeRawEvent(contractId, "opaque", [xdr.ScVal.scvLedgerKeyContractInstance(), contractInstance, nonce])
+    );
+
+    assert.equal(result.description, "opaque(, , <nonce:123>) called on " + contractId);
+    assert.ok(!result.description.includes("[object Object]"));
   });
 
   it("re-checks a contract registered after an initial negative lookup", async () => {
@@ -180,9 +200,9 @@ describe("decode()", () => {
 
   it("uses buildDescription for 'approve'", async () => {
     db.getContractMeta = async (id) =>
-      id === C13 ? { id: C13, name: "Token", functions: [{ name: "approve" }] } : null;
+      id === C19 ? { id: C19, name: "Token", functions: [{ name: "approve" }] } : null;
 
-    const ev = makeRawEvent(C13, "approve", [scAddress(ADDR_G), scAddress(ADDR_G2)]);
+    const ev = makeRawEvent(C19, "approve", [scAddress(ADDR_G), scAddress(ADDR_G2)]);
 
     const result = await decode(ev);
     assert.equal(result.function, "approve");
@@ -315,11 +335,7 @@ describe("decode()", () => {
 
     const result = await decode(ev);
     assert.equal(result.function, "deposit");
-    assert.ok(result.description.includes("deposited"), "description should say 'deposited'");
-    assert.ok(result.description.includes("1000"), "description should include amount");
-    assert.ok(result.description.includes("USDC"), "description should include token");
-    assert.ok(result.description.includes("Blend"), "description should include contract name");
-    assert.ok(result.description.includes("into"), "description should say 'into'");
+    assert.equal(result.description, "Address GCFIRY…YOJR deposited 1000 USDC into Blend");
   });
 
   it("uses buildDescription for 'withdraw'", async () => {
@@ -334,18 +350,14 @@ describe("decode()", () => {
 
     const result = await decode(ev);
     assert.equal(result.function, "withdraw");
-    assert.ok(result.description.includes("withdrew"), "description should say 'withdrew'");
-    assert.ok(result.description.includes("750"), "description should include amount");
-    assert.ok(result.description.includes("USDC"), "description should include token");
-    assert.ok(result.description.includes("Blend"), "description should include contract name");
-    assert.ok(result.description.includes("from"), "description should say 'from'");
+    assert.equal(result.description, "Address GCFIRY…YOJR withdrew 750 USDC from Blend");
   });
 
   it("uses buildDescription for 'transfer_from'", async () => {
     db.getContractMeta = async (id) =>
-      id === C17 ? { id: C17, name: "DexRouter", functions: [{ name: "transfer_from" }] } : null;
+      id === C20 ? { id: C20, name: "DexRouter", functions: [{ name: "transfer_from" }] } : null;
 
-    const ev = makeRawEvent(C17, "transfer_from", [
+    const ev = makeRawEvent(C20, "transfer_from", [
       scAddress(ADDR_G),
       scAddress(ADDR_G2),
       scAddress(ADDR_G),
@@ -469,11 +481,33 @@ describe("decode()", () => {
     assert.ok(result.description.includes(longStr), "128-char string should not be truncated");
   });
 
+  it("genericDescription redacts invalid G-strings, long hex, and padded base64", async () => {
+    db.getContractMeta = async () => null;
+    const invalidStrkey = "G" + "A".repeat(54) + "_";
+    const hex = "a".repeat(64);
+    const base64 = "A".repeat(43) + "=";
+    const ev = makeRawEvent(C8, "myFunc", [
+      xdr.ScVal.scvString(invalidStrkey),
+      xdr.ScVal.scvString(hex),
+      xdr.ScVal.scvString(base64),
+    ]);
+
+    const result = await decode(ev);
+    assert.match(result.description, /myFunc\(\[REDACTED\], \[REDACTED\], \[REDACTED\]\)/);
+    assert.ok(!result.description.includes(invalidStrkey));
+    assert.ok(!result.description.includes(hex));
+    assert.ok(!result.description.includes(base64));
+  });
+
   it("genericDescription truncates a 129-char non-address string", async () => {
     db.getContractMeta = async () => null;
     const longStr = "c d ".repeat(32) + "e";
     const ev = makeRawEvent(C8, "myFunc", [xdr.ScVal.scvString(longStr)]);
     const result = await decode(ev);
+    assert.ok(
+      result.description.includes(`${longStr.slice(0, 32)}…${longStr.slice(-16)}`),
+      "129-char string should keep the first 32 and last 16 characters"
+    );
     assert.ok(
       result.description.includes("…"),
       "129-char string should be truncated"

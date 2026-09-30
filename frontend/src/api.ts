@@ -7,6 +7,7 @@ export interface DecodedEvent {
   ledger: number;
   description: string;
   raw_topics: string[];
+  raw_data?: string;
   tx_hash?: string;
   created_at?: string;
   sac_asset?: string;
@@ -20,6 +21,7 @@ export interface ContractMeta {
   functions: { name: string; description: string }[];
   registered_by?: string;
   created_at?: string;
+  event_count?: number;
 }
 
 export interface WalletEventsResponse {
@@ -43,13 +45,23 @@ export interface ContractsResponse {
   limit: number;
 }
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, path: string) {
+    super(`API ${status}: ${path}`);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 async function get<T>(path: string): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
     const res = await fetch(BASE + path, { signal: controller.signal });
-    if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+    if (!res.ok) throw new ApiError(res.status, path);
     return res.json();
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -67,7 +79,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+  if (!res.ok) throw new ApiError(res.status, path);
   return res.json();
 }
 

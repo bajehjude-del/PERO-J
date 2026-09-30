@@ -16,11 +16,13 @@ import pg from "pg";
 // ── in-memory SQL mock ────────────────────────────────────────────────────────
 
 const _calls = []; // { sql, params }[]
+const _appliedMigrations = new Set();
 let _nextRow = null; // override row returned by the next query
 let _queryError = null; // if set, next query throws this error
 
 function resetMock() {
   _calls.length = 0;
+  _appliedMigrations.clear();
   _nextRow = null;
   _queryError = null;
 }
@@ -38,6 +40,12 @@ const fakeClient = {
       throw err;
     }
     _calls.push({ sql, params });
+    if (sql.includes("SELECT 1 FROM schema_migrations WHERE id = $1")) {
+      return { rows: [], rowCount: _appliedMigrations.has(params[0]) ? 1 : 0 };
+    }
+    if (sql.includes("INSERT INTO schema_migrations")) {
+      _appliedMigrations.add(params[0]);
+    }
     if (_nextRow !== null) {
       const row = _nextRow;
       _nextRow = null;
@@ -56,7 +64,11 @@ pg.Pool.prototype.query = async (sql, params) => {
     _queryError = null;
     throw err;
   }
-  _calls.push({ sql, params });
+  _calls.push({
+    sql: typeof sql === "object" ? sql.text : sql,
+    params,
+    query_timeout: typeof sql === "object" ? sql.query_timeout : undefined,
+  });
   if (_nextRow !== null) {
     const row = _nextRow;
     _nextRow = null;
@@ -71,16 +83,53 @@ import { db, getPoolSize } from "../src/db.js";
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
+describe("db.init() migrations", () => {
+  beforeEach(() => resetMock());
+
+  it("runs migrations on a fresh database", async () => {
+    await db.init();
+    const migrationSql = _calls.find((call) =>
+      call.sql.includes("ALTER TABLE events ADD COLUMN IF NOT EXISTS sac_asset TEXT")
+    );
+    assert.ok(migrationSql, "expected a migration to add sac_asset idempotently");
+  });
+
+  it("adds sac_asset when earlier migrations are already recorded", async () => {
+    for (const id of [1, 2, 3, 4, 5]) _appliedMigrations.add(id);
+
+    await db.init();
+
+    const migration = _calls.find((call) =>
+      call.sql.includes("ALTER TABLE events ADD COLUMN IF NOT EXISTS sac_asset TEXT")
+    );
+    assert.ok(migration, "expected the repair migration to run");
+    assert.ok(
+      _calls.some(
+        (call) => call.sql.includes("INSERT INTO schema_migrations") && call.params[0] === 6
+      ),
+      "expected migration 6 to be recorded"
+    );
+  });
+});
+
 describe("db.ping()", () => {
   beforeEach(() => resetMock());
 
   it("returns true when query succeeds", async () => {
     const result = await db.ping();
     assert.equal(result, true);
+    assert.equal(lastCall().sql, "SELECT 1");
+    assert.equal(lastCall().query_timeout, 5000);
   });
 
   it("returns false when query throws", async () => {
     _queryError = new Error("connection refused");
+    const result = await db.ping();
+    assert.equal(result, false);
+  });
+
+  it("returns false when the query times out", async () => {
+    _queryError = new Error("Query read timeout");
     const result = await db.ping();
     assert.equal(result, false);
   });
@@ -137,6 +186,13 @@ describe("db.upsertEvent()", () => {
     await db.upsertEvent(sampleEvent);
     const { sql } = lastCall();
     assert.ok(sql.includes("onchain_seq"), "expected onchain_seq column in INSERT");
+  });
+
+  it("persists sac_asset when provided", async () => {
+    await db.upsertEvent({ ...sampleEvent, sac_asset: "USDC" });
+    const { sql, params } = lastCall();
+    assert.ok(sql.includes("sac_asset"), "expected sac_asset column in INSERT");
+    assert.equal(params[7], "USDC");
   });
 });
 
@@ -462,6 +518,33 @@ describe("db.getContracts()", () => {
     // offset should be (3-1)*10 = 20 — verify it's passed to query
     const params = _calls.flatMap((c) => c.params ?? []);
     assert.ok(params.includes(20), "expected offset=20 in query params");
+  });
+
+  // Regression test for #787: when q is present the LIMIT/OFFSET $N indices
+  // must still be correct — i.e. the q param occupies $1, LIMIT must be $2,
+  // and OFFSET must be $3.  Previously the +1/+2 arithmetic was computed
+  // against the wrong params array which could produce the wrong page.
+  it("uses correct LIMIT/OFFSET $N indices when q and page are both provided (#787)", async () => {
+    _nextRow = { count: "3" };
+    // page=2, limit=1 → offset = (2-1)*1 = 1
+    const result = await db.getContracts({ q: "swap", page: 2, limit: 1 });
+    assert.equal(result.page, 2);
+    assert.equal(result.limit, 1);
+
+    // Find the SELECT (non-COUNT) query — it should contain LIMIT and OFFSET
+    const selectCall = _calls.find(
+      (c) => c.sql && c.sql.toUpperCase().includes("ORDER BY NAME ASC")
+    );
+    assert.ok(selectCall, "expected a SELECT query with ORDER BY name ASC");
+
+    const selectParams = selectCall.params;
+    // $1 = q wildcard, $2 = limit (1), $3 = offset (1)
+    assert.ok(
+      typeof selectParams[0] === "string" && selectParams[0].includes("swap"),
+      "expected q wildcard as first SELECT param ($1)"
+    );
+    assert.equal(selectParams[1], 1, "expected LIMIT=1 as second SELECT param ($2)");
+    assert.equal(selectParams[2], 1, "expected OFFSET=1 as third SELECT param ($3)");
   });
 });
 

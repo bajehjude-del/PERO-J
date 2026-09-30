@@ -4,6 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import Skeleton from "../components/Skeleton";
 
+function truncateId(id: string, head = 8, tail = 6) {
+  if (!id) return "";
+  if (id.length <= head + tail + 1) return id;
+  return `${id.slice(0, head)}…${id.slice(-tail)}`;
+}
+
 export default function ContractsPage() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -64,12 +70,20 @@ export default function ContractsPage() {
                 style={{ textDecoration: "none", color: "inherit", display: "block" }}
               >
                 <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontWeight: 600 }}>{c.name}</span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontWeight: 600 }}>{c.name}</span>
+                    <span style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>
+                      {c.eventCount ?? 0} events
+                    </span>
+                  </div>
                   <span style={{ color: "var(--muted)", fontSize: 13 }}>
                     {c.description || "No description"}
                   </span>
-                  <code style={{ fontSize: 11, color: "var(--muted)", wordBreak: "break-all" }}>
-                    {c.id}
+                  <code
+                    title={c.id}
+                    style={{ fontSize: 11, color: "var(--muted)", wordBreak: "break-all" }}
+                  >
+                    {truncateId(c.id)}
                   </code>
                 </div>
               </Link>
