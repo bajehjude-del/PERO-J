@@ -202,6 +202,28 @@ export function createApp() {
     })
   );
 
+  // GET /api/events/:seq/raw
+  app.get(
+    "/api/events/:seq/raw",
+    asyncHandler(async (req, res) => {
+      const seqStr = String(req.params.seq).trim();
+      const seq = parseInt(seqStr, 10);
+      if (isNaN(seq) || seq < 0 || !/^\d+$/.test(seqStr)) {
+        return res.status(400).json({ error: "seq must be a non-negative integer" });
+      }
+      const ev = await db.getEvent(seq);
+      if (!ev) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      res.json({
+        seq: ev.seq,
+        raw_topics: ev.raw_topics,
+        raw_data: ev.raw_data,
+        tx_hash: ev.tx_hash,
+      });
+    })
+  );
+
   // GET /api/events/stream — Server-Sent Events endpoint for live event feed
   app.get("/api/events/stream", (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");

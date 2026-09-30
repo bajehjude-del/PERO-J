@@ -697,7 +697,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Error(Contract, #4)")]
     fn test_submit_event_oversized_raw_data_panics() {
         let (env, client) = setup!();
         let admin = Address::generate(&env);
