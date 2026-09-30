@@ -8,6 +8,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- [#747](../../issues/747) `get_events()` must cap `limit` to prevent CPU exhaustion ([`58139bf`](../../commit/58139bfb29c0e0cddc1af6f34af9566a4ccb5a11))
+
+Closes [#747](../../issues/747)
+
+
+- [#746](../../issues/746) `submit_event()` must accept allowlisted hot-wallet indexers ([`144af0c`](../../commit/144af0c87f56dcc80e291836e80d99d55fa9dade))
+
+Closes [#746](../../issues/746)
+
+
+- [#745](../../issues/745) `init()` must be permanently irreversible after first call ([`2a64bb5`](../../commit/2a64bb5288d1b1f8dbf392bfa0e7d2915f991a28))
+
+Closes [#745](../../issues/745)
+
+
 - Add isMissingFunctionError helper to validateSep41.js ([`e0a4cda`](../../commit/e0a4cda6aed51532e91db95396a9ef85ab2dab92))
 
 - isMissingFunctionError(err) is defined and exported, detecting
@@ -944,6 +959,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`c8ad944`](../../commit/c8ad9441917c159da99729fc9c161baf26bd6cda))
 
 - Auto-update CHANGELOG.md [skip ci] ([`8607095`](../../commit/86070959f45ec1302a00de076575c8b4cb23747b))
 
