@@ -42,7 +42,6 @@ SorobanRpc.Server.prototype.simulateTransaction = async function (_tx) {
   return simSuccess();
 };
 
-import { mapWithConcurrency, validateSep41 } from "../src/validateSep41.js";
 import {
   validateSep41,
   mapWithConcurrency,
@@ -188,6 +187,9 @@ describe("every(Boolean) — false values are not treated as compliant", () => {
     const { compliant, results } = await validateSep41(CONTRACT_ID);
     assert.equal(compliant, false);
     assert.ok(Object.values(results).every((v) => v === false));
+  });
+});
+
 describe("mapWithConcurrency() — mapper error handling", () => {
   it("fills every slot even when the mapper throws for some items", async () => {
     // Mapper succeeds for the first two items and throws for the rest.

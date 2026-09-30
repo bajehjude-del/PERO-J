@@ -123,8 +123,6 @@ export async function mapWithConcurrency(items, limit, mapper) {
   return results;
 }
 
-export { mapWithConcurrency };
-
 async function functionExists(contract, fnName, args) {
   const account = new Account(DUMMY_SOURCE, "0");
   const tx = new TransactionBuilder(account, {

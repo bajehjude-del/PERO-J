@@ -86,6 +86,26 @@ describe("decode()", () => {
     assert.ok(result.description.includes("myFunc"), "description should contain function name");
   });
 
+  it("does not stringify contract instance and nonce topics as objects", async () => {
+    db.getContractMeta = async () => null;
+    const contractId = StrKey.encodeContract(Buffer.alloc(32, 19));
+    const contractInstance = xdr.ScVal.scvContractInstance(
+      new xdr.ScContractInstance({
+        executable: xdr.ContractExecutable.contractExecutableWasm(Buffer.alloc(32)),
+        storage: [],
+      })
+    );
+    const nonce = xdr.ScVal.scvLedgerKeyNonce(
+      new xdr.ScNonceKey({ nonce: xdr.Int64.fromString("123") })
+    );
+    const result = await decode(
+      makeRawEvent(contractId, "opaque", [xdr.ScVal.scvLedgerKeyContractInstance(), contractInstance, nonce])
+    );
+
+    assert.equal(result.description, "opaque(, , <nonce:123>) called on " + contractId);
+    assert.ok(!result.description.includes("[object Object]"));
+  });
+
   it("re-checks a contract registered after an initial negative lookup", async () => {
     db.getContractMeta = async () => null;
     const ev = makeRawEvent(C13, "transfer", [scAddress(ADDR_G), scAddress(ADDR_G2)]);

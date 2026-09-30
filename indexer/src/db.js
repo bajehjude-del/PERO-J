@@ -6,6 +6,7 @@ import { eventEmitter } from "./events.js";
 /** @typedef {import('./types.js').VolumeResult} VolumeResult */
 
 const DEFAULT_POOL_SIZE = 20;
+const PING_TIMEOUT_MS = 5000;
 
 /**
  * Parse and validate DATABASE_POOL_SIZE environment variable.
@@ -198,7 +199,7 @@ export const db = {
    */
   async ping() {
     try {
-      await pool.query("SELECT 1");
+      await pool.query({ text: "SELECT 1", query_timeout: PING_TIMEOUT_MS });
       return true;
     } catch {
       return false;
@@ -485,10 +486,10 @@ export const db = {
   async getLeaderboard(limit = 10) {
     const capped = Math.min(Math.max(Number(limit) || 10, 1), 50);
     const { rows } = await pool.query(
-      `SELECT e.contract_id, c.name, COUNT(*) AS event_count
+      `SELECT e.contract_id, COALESCE(c.name, e.contract_id) AS name, COUNT(*) AS event_count
        FROM events e
-       JOIN contracts c ON c.id = e.contract_id
-       GROUP BY e.contract_id, c.name
+       LEFT JOIN contracts c ON c.id = e.contract_id
+       GROUP BY e.contract_id, COALESCE(c.name, e.contract_id)
        ORDER BY event_count DESC
        LIMIT $1`,
       [capped]

@@ -81,14 +81,17 @@ describe("fetchTokenMetadata()", () => {
       if (calls === 1) {
         return { error: "sourceAccountNotFound" };
       }
-      return simOk(scvString("USDC"));
+      if (calls === 4) {
+        return simOk(scvString("USDC"));
+      }
+      return simOk(scvVoid());
     };
 
     const meta = await fetchTokenMetadata(nextId());
     assert.equal(meta.name, "USDC");
     assert.equal(meta.symbol, "");
     assert.equal(meta.decimals, 7);
-    assert.equal(calls, 2);
+    assert.equal(calls, 4);
   });
 
   it("coerces void returns to empty string / default 7 decimals", async () => {

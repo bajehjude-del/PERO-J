@@ -38,6 +38,13 @@ describe("Rate limiting probe exemption", () => {
     }
   });
 
+  it("allows 101 sequential /ready requests without hitting rate limit", async () => {
+    for (let i = 0; i < 101; i++) {
+      const res = await fetch(`${baseUrl}/ready`);
+      assert.equal(res.status, 200, `Request ${i + 1} to /ready should return 200`);
+    }
+  });
+
   it("applies rate limiter to /api/* routes after max requests", async () => {
     let lastStatus = 200;
     for (let i = 0; i < 105; i++) {

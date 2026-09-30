@@ -8,6 +8,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Add isMissingFunctionError helper to validateSep41.js ([`e0a4cda`](../../commit/e0a4cda6aed51532e91db95396a9ef85ab2dab92))
+
+- isMissingFunctionError(err) is defined and exported, detecting
+    fn_not_found, function not found, no such function, and invalid
+    function error patterns.
+  - validateSep41 correctly returns true for present functions.
+  - Remove duplicate export of mapWithConcurrency that caused a
+    SyntaxError (Duplicate export).
+  - Fix duplicate import and unclosed describe/it blocks in
+    validateSep41.test.js caused by a bad merge.
+
+  Closes [#819](../../issues/819)
+
+
+- Address explorer issues 748-751 ([`50aa764`](../../commit/50aa7648b300f7f8fba5fa42f6bd1b1704d04bdc))
+
 - Ensure sac_asset column exists ([`355c698`](../../commit/355c698e5db8e17a3162627291835d7ce9e4c0ee))
 
 - Use GIN index for wallet event queries ([`df010b2`](../../commit/df010b2a97a13e7f6053c8bd84d13fa06e972398))
@@ -298,6 +314,12 @@ The frontend CI was failing with 'npm ci can only install packages when
 - Address issues 768, 770, 771, 772 ([`4e054d0`](../../commit/4e054d036c69101d9d019fed8d93c7f11d46ffc2))
 
 - Harden SAC parsing and signed SCVal decoding ([`ee19d80`](../../commit/ee19d806125d9177d51541bcc721dcefb8c56cc5))
+
+- Address indexer issue checks ([`51a9735`](../../commit/51a9735f6018e370f7b8440eebe22e83b0c8f758))
+
+- Address issues 756-759 ([`77f3094`](../../commit/77f309477c5ff8fe9579c06e3a4e9b9806a7908e))
+
+- Refresh EventSeq TTL on submissions ([`6830264`](../../commit/68302648c121eccb97244ce9a129ebbe64dfebf7))
 
 - React keys, search query, and debounce in EventTable and Home ([`b3be6a2`](../../commit/b3be6a2cc8b51288676a183ef53944eafffeea16))
 
@@ -921,6 +943,24 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`3167e8a`](../../commit/3167e8a3b120dc11e07b26f3145f109e05cd5f89))
+
+- Auto-update CHANGELOG.md [skip ci] ([`bb1eeca`](../../commit/bb1eeca69ae041ef18b3528953e010a2a29d843e))
+
+- Auto-update CHANGELOG.md [skip ci] ([`65cac23`](../../commit/65cac237e43d54522170090734f8fbccb8b9ce66))
+
+- Auto-update CHANGELOG.md [skip ci] ([`616702f`](../../commit/616702f6934a56e1f80441936d24811849a0a757))
+
+- Auto-update CHANGELOG.md [skip ci] ([`da5607d`](../../commit/da5607da63529381e11704d54e44b442d021ec5b))
+
+- Auto-update CHANGELOG.md [skip ci] ([`3a10d00`](../../commit/3a10d00550e5c586407a2ef978a34f7f3d328f90))
+
+- Auto-update CHANGELOG.md [skip ci] ([`314822e`](../../commit/314822ec34b7f18d0ed99fc4fbda31490f2d4d35))
+
+- Auto-update CHANGELOG.md [skip ci] ([`5f131b9`](../../commit/5f131b91d28dd0a0af5d90b2fe467893d8334eca))
+
+- Auto-update CHANGELOG.md [skip ci] ([`7116486`](../../commit/71164862dbfa5047da2ff728a8663fe028223a77))
+
 - Auto-update CHANGELOG.md [skip ci] ([`e846fba`](../../commit/e846fba3a10e00749812ffd3a04abd3ef6e390af))
 
 - Auto-update CHANGELOG.md [skip ci] ([`281650d`](../../commit/281650dbbc5ed8a30b2e82d8ba39549e65c26f76))
@@ -1217,6 +1257,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Features
+
+- Add SEP-41 token metadata endpoint ([#816](../../issues/816)) ([`77ee7d8`](../../commit/77ee7d8bd455a71a0235b348d35bef8f197496fb))
 
 - Add onchain_seq nullable column to events table ([#828](../../issues/828)) ([`02757a5`](../../commit/02757a5ed2e1e4324ee70cf1f8ac8ebefc4e9883))
 
@@ -1532,6 +1574,8 @@ Closes [#3](../../issues/3) — Parse ScVal Types to Native JavaScript Types
 
 
 ### Miscellaneous
+
+- Finalize issue [#752](../../issues/752)-[#755](../../issues/755) fix tracking ([`02d8e36`](../../commit/02d8e36ab30abe8437a82e9815e39f02056d1938))
 
 - Resolve maintenance issues 372 through 375 ([`bba5bb7`](../../commit/bba5bb70d9af7c6d34d3ea26cd144952dcd01a2f))
 

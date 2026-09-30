@@ -177,6 +177,22 @@ export function createApp() {
     })
   );
 
+  // GET /api/tokens/:id/metadata — SEP-41 token metadata from simulated calls
+  app.get(
+    "/api/tokens/:id/metadata",
+    asyncHandler(async (req, res) => {
+      let metadata;
+      try {
+        metadata = await fetchTokenMetadata(req.params.id);
+      } catch {
+        return res.status(404).json({ error: "Contract is not SEP-41 compliant" });
+      }
+
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      return res.json({ contract_id: req.params.id, ...metadata });
+    })
+  );
+
   // GET /api/leaderboard?limit=10 — top contracts by event volume
   app.get(
     "/api/leaderboard",
@@ -202,19 +218,25 @@ export function createApp() {
     })
   );
 
-  // GET /api/wallet/:address?page=&limit= — paginated events for a wallet.
+  // GET /api/events/:seq/raw
   app.get(
-    "/api/wallet/:address",
+    "/api/events/:seq/raw",
     asyncHandler(async (req, res) => {
-      if (!isValidStellarAddress(req.params.address)) {
-        return res.status(400).json({ error: "Invalid Stellar address" });
+      const seqStr = String(req.params.seq).trim();
+      const seq = parseInt(seqStr, 10);
+      if (isNaN(seq) || seq < 0 || !/^\d+$/.test(seqStr)) {
+        return res.status(400).json({ error: "seq must be a non-negative integer" });
       }
-
-      const result = await db.getWalletEvents(req.params.address, {
-        page: Number(req.query.page) || 1,
-        limit: Number(req.query.limit) || 25,
+      const ev = await db.getEvent(seq);
+      if (!ev) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      res.json({
+        seq: ev.seq,
+        raw_topics: ev.raw_topics,
+        raw_data: ev.raw_data,
+        tx_hash: ev.tx_hash,
       });
-      res.json(result);
     })
   );
 
@@ -276,6 +298,28 @@ export function createApp() {
         return res.status(404).json({ error: "Not found" });
       }
       res.json(ev);
+    })
+  );
+
+  // GET /api/events/:seq/raw — return only the raw event payload fields.
+  app.get(
+    "/api/events/:seq/raw",
+    asyncHandler(async (req, res) => {
+      const seqStr = String(req.params.seq).trim();
+      const seq = parseInt(seqStr, 10);
+      if (isNaN(seq) || seq < 0 || !/^\d+$/.test(seqStr)) {
+        return res.status(400).json({ error: "seq must be a non-negative integer" });
+      }
+      const ev = await db.getEvent(seq);
+      if (!ev) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      res.json({
+        seq: ev.seq,
+        raw_topics: ev.raw_topics,
+        raw_data: ev.raw_data,
+        tx_hash: ev.tx_hash,
+      });
     })
   );
 

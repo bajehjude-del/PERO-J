@@ -183,14 +183,15 @@ impl ExplorerContract {
         }
     }
 
-    /// Read the next event sequence number from instance storage.
+    /// Read the next event sequence number from persistent storage.
     ///
     /// Panics with `NotInitialized` if the counter is missing, which means
     /// `init` has not been called yet.
     fn event_seq(env: &Env) -> u64 {
         env.storage()
-            .instance()
+            .persistent()
             .get(&DataKey::EventSeq)
+            .or_else(|| env.storage().instance().get(&DataKey::EventSeq))
             .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
     }
 
@@ -227,7 +228,10 @@ impl ExplorerContract {
             panic_with_error!(&env, Error::AlreadyExists);
         }
         env.storage().persistent().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::EventSeq, &0u64);
+        env.storage().persistent().set(&DataKey::EventSeq, &0u64);
+        env.storage().persistent().extend_ttl(
+            &DataKey::EventSeq, EVENTSEQ_TTL_THRESHOLD, EVENTSEQ_TTL_BUMP,
+        );
         Self::bump_ttl(&env);
     }
 
@@ -491,7 +495,7 @@ impl ExplorerContract {
         if limit > MAX_PAGE {
             panic_with_error!(&env, Error::LimitExceeded);
         }
-        let total: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
+        let total: u64 = env.storage().persistent().get(&DataKey::EventSeq).unwrap_or(0);
         let mut out: Vec<DecodedEvent> = Vec::new(&env);
         let end = from.saturating_add(limit as u64).min(total);
         for seq in from..end {
@@ -508,7 +512,10 @@ impl ExplorerContract {
 mod tests {
     use super::*;
     use soroban_sdk::{
-        testutils::{storage::Instance as _, Address as _, Events as _, Ledger as _},
+        testutils::{
+            storage::{Instance as _, Persistent as _},
+            Address as _, Events as _, Ledger as _,
+        },
         Env, IntoVal, TryFromVal,
     };
 
@@ -690,7 +697,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Error(Contract, #4)")]
     fn test_submit_event_oversized_raw_data_panics() {
         let (env, client) = setup!();
         let admin = Address::generate(&env);
@@ -802,7 +809,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Error(Contract, #2)")]
     fn test_transfer_admin_wrong_caller_panics() {
         let (env, client) = setup!();
         let admin    = Address::generate(&env);
@@ -810,6 +817,50 @@ mod tests {
         client.init(&admin);
         // attacker tries to hijack admin — must panic
         client.transfer_admin(&attacker, &attacker);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_transfer_admin_requires_auth() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        let new_admin = Address::generate(&env);
+        client.init(&admin);
+
+        env.set_auths(&[]);
+        client.transfer_admin(&admin, &new_admin);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_submit_event_requires_auth() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        env.set_auths(&[]);
+        let cid: BytesN<32> = BytesN::from_array(&env, &[12u8; 32]);
+        client.submit_event(
+            &admin,
+            &cid,
+            &symbol_short!("swap"),
+            &1u32,
+            &String::from_str(&env, "must require authorization"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_add_indexer_requires_admin_auth() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        client.init(&admin);
+
+        env.set_auths(&[]);
+        client.add_indexer(&admin, &indexer);
     }
 
     // ── #1 — init is permanently irreversible ────────────────────────────────
@@ -823,10 +874,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "Error(Contract, #3)")]
     fn test_init_is_irreversible_without_instance_entry() {
-        let env = Env::default();
-        env.mock_all_auths();
-        let id = env.register_contract(None, ExplorerContract);
-        let client = ExplorerContractClient::new(&env, &id);
+        let (env, client) = setup!();
+        let id = client.address.clone();
 
         let admin    = Address::generate(&env);
         let attacker = Address::generate(&env);
@@ -864,6 +913,43 @@ mod tests {
         // TTL was pushed well past the 30-day bump threshold.
         let ttl = env.as_contract(&client.address, || env.storage().instance().get_ttl());
         assert!(ttl >= TTL_THRESHOLD, "instance ttl {} not bumped", ttl);
+    }
+
+    #[test]
+    fn test_event_seq_survives_instance_ttl_expiry() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[14u8; 32]);
+        client.submit_event(
+            &admin,
+            &cid,
+            &symbol_short!("swap"),
+            &1u32,
+            &String::from_str(&env, "first event"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+
+        // Model the instance entry expiring while the persistent counter remains.
+        env.as_contract(&client.address, || {
+            env.storage().instance().remove(&DataKey::EventSeq);
+        });
+
+        client.submit_event(
+            &admin,
+            &cid,
+            &symbol_short!("swap"),
+            &2u32,
+            &String::from_str(&env, "second event"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+
+        assert_eq!(client.event_count(), 2u64);
+        assert_eq!(client.get_event(&0u64).seq, 0u64);
+        assert_eq!(client.get_event(&1u64).seq, 1u64);
     }
 
     // ── #2 — indexer allowlist ───────────────────────────────────────────────
@@ -942,6 +1028,67 @@ mod tests {
         let admin = Address::generate(&env);
         client.init(&admin);
         assert_eq!(client.get_events(&0u64, &MAX_PAGE).len(), 0);
+    }
+
+    #[test]
+    fn test_get_events_limit_zero_returns_empty() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+        let cid: BytesN<32> = BytesN::from_array(&env, &[15u8; 32]);
+        client.submit_event(
+            &admin,
+            &cid,
+            &symbol_short!("swap"),
+            &1u32,
+            &String::from_str(&env, "event"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+
+        assert_eq!(client.get_events(&0u64, &0u32).len(), 0);
+    }
+
+    #[test]
+    fn test_get_events_from_equals_total_returns_empty() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+        let cid: BytesN<32> = BytesN::from_array(&env, &[16u8; 32]);
+        client.submit_event(
+            &admin,
+            &cid,
+            &symbol_short!("swap"),
+            &1u32,
+            &String::from_str(&env, "event"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+
+        assert_eq!(client.get_events(&1u64, &MAX_PAGE).len(), 0);
+    }
+
+    #[test]
+    fn test_get_events_from_last_returns_one() {
+        let (env, client) = setup!();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+        let cid: BytesN<32> = BytesN::from_array(&env, &[17u8; 32]);
+        for ledger in 1..=2 {
+            client.submit_event(
+                &admin,
+                &cid,
+                &symbol_short!("swap"),
+                &ledger,
+                &String::from_str(&env, "event"),
+                &Vec::new(&env),
+                &Bytes::new(&env),
+            );
+        }
+
+        let events = client.get_events(&1u64, &MAX_PAGE);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events.get(0).unwrap().seq, 1u64);
     }
 
     // ── #4 — update_contract emits an event ──────────────────────────────────

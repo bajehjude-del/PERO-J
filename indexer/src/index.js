@@ -87,9 +87,9 @@ export function extractAddresses(values, found = new Set()) {
   return [...found];
 }
 
-async function indexLedger(ledger) {
+export async function indexLedger(ledger, rpcClient = rpc) {
   // getEvents supports cursor-based pagination; we use ledger range here
-  const res = await rpc.getEvents({
+  const res = await rpcClient.getEvents({
     startLedger: ledger,
     filters: [{ type: "contract" }],
     limit: 200,
@@ -143,7 +143,9 @@ export function isExplorerUpdateEvent(ev) {
     return false;
   }
   try {
-    return topic.value()?.sym() === "update";
+    const symbol =
+      typeof topic.sym === "function" ? topic.sym() : topic.value?.()?.sym();
+    return symbol === "update";
   } catch {
     return false;
   }
@@ -220,7 +222,7 @@ async function run() {
   await initWithMigrationLock();
   await registerFixtures().catch((err) => {
     console.error("[fixtures] failed to register ABI fixtures:", err.message);
-  }
+  });
 
   startApi();
 

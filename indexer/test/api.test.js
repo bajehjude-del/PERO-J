@@ -105,6 +105,35 @@ describe("errorHandler middleware", () => {
   });
 });
 
+describe("async route errors", () => {
+  it("returns a 500 JSON error when a database request rejects", async () => {
+    const originalGetDistinctFunctions = db.getDistinctFunctions;
+    const originalConsoleError = console.error;
+    let server;
+    db.getDistinctFunctions = async () => {
+      throw new Error("database unavailable");
+    };
+    console.error = () => {};
+
+    try {
+      server = createApp().listen(0);
+      const { port } = server.address();
+      const response = await fetch(`http://127.0.0.1:${port}/api/functions`);
+
+      assert.equal(response.status, 500);
+      assert.deepEqual(await response.json(), { error: "database unavailable" });
+    } finally {
+      db.getDistinctFunctions = originalGetDistinctFunctions;
+      console.error = originalConsoleError;
+      if (server) {
+        await new Promise((resolve, reject) =>
+          server.close((err) => (err ? reject(err) : resolve()))
+        );
+      }
+    }
+  });
+});
+
 describe("GET /api/functions cache", () => {
   it("reuses the cached result for 60 seconds and refreshes after expiry", async () => {
     const original = db.getDistinctFunctions;

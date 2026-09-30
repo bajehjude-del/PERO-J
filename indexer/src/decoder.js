@@ -2,6 +2,7 @@ import { LRUCache } from "lru-cache";
 import { scValToNative, StrKey } from "@stellar/stellar-sdk";
 import { db } from "./db.js";
 import { detectSac } from "./sac.js";
+import { scValToJs } from "./scval.js";
 
 /** @typedef {import('./types.js').DecodedEvent} DecodedEvent */
 /** @typedef {import('./types.js').ContractMeta} ContractMeta */
@@ -18,6 +19,12 @@ const contractMetaCache = new LRUCache({
 // behind a stale null value for up to the full window.
 const NOT_REGISTERED_TTL_MS = 2_000;
 
+export function serializeRawData(data) {
+  return JSON.stringify(data, (_, value) =>
+    typeof value === "bigint" ? value.toString() : value
+  );
+}
+
 /**
  * Decode a raw Soroban RPC event into a human-readable record.
  * Falls back to a generic description when no ABI is registered.
@@ -33,7 +40,7 @@ const NOT_REGISTERED_TTL_MS = 2_000;
 export async function decode(ev) {
   const contractId = ev.contractId;
   const topics = ev.topic.map((t, index) => decodeTopic(t, ev, index));
-  const data = scValToNative(ev.value);
+  const data = scValToJs(ev.value);
 
   // First topic is typically the function name symbol
   const fnName =
@@ -73,7 +80,7 @@ export async function decode(ev) {
     tx_hash: ev.txHash,
     description,
     raw_topics: topics.map(String),
-    raw_data: JSON.stringify(data, (_, v) => (typeof v === "bigint" ? v.toString() : v)),
+    raw_data: serializeRawData(data),
     event_addresses: eventAddresses,
     ...(isSac && { sac_asset: assetCode }),
   };
@@ -81,7 +88,7 @@ export async function decode(ev) {
 
 function decodeTopic(topic, ev, index) {
   try {
-    return scValToNative(topic);
+    return scValToJs(topic);
   } catch (err) {
     console.warn("Topic decode error:", {
       contractId: ev.contractId,

@@ -108,13 +108,13 @@ export function scValToJs(val) {
     }
 
     case "scvLedgerKeyContractInstance":
-      return "<contract-instance>";
+      return "";
 
     case "scvLedgerKeyNonce":
       return `<nonce:${BigInt(val.nonceKey().nonce().toString())}>`;
 
     case "scvContractInstance":
-      return "<contract-instance>";
+      return "";
 
     default:
       return String(val);
