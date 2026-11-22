@@ -126,6 +126,7 @@ export const api = {
     return get<EventsResponse>(`/events?${q}`);
   },
   event:            (seq: number)                         => get<DecodedEvent>(`/events/${seq}`),
+  eventByTxHash:    (hash: string)                        => get<DecodedEvent | null>(`/events/by-tx/${encodeURIComponent(hash)}`),
   contracts:        (params: { q?: string; page?: number; limit?: number }) => {
     const q = new URLSearchParams();
     if (params.q)       q.set("q", params.q);

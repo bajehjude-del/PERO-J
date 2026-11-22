@@ -218,6 +218,11 @@ export function createApp() {
     })
   );
 
+  app.get(
+    "/api/events/by-tx/:hash",
+    asyncHandler(async (req, res) => {
+      const event = await db.getEventByTxHash(req.params.hash);
+      res.json(event);
   // GET /api/events/:seq/raw
   app.get(
     "/api/events/:seq/raw",

@@ -46,6 +46,47 @@ export default function Nav() {
   });
 
   return (
+    <header style={{
+      background: "var(--surface)",
+      borderBottom: "1px solid var(--border)",
+      padding: "12px 24px",
+      display: "flex",
+      alignItems: "center",
+      gap: 16,
+    }}>
+      <NavLink
+        to="/"
+        style={({ isActive }) => ({
+          fontWeight: 700,
+          fontSize: 16,
+          whiteSpace: "nowrap",
+          color: isActive ? "var(--accent)" : "inherit",
+          borderBottom: isActive ? "2px solid var(--accent)" : "none",
+          paddingBottom: isActive ? "4px" : "0px",
+        })}
+      >
+        ⬡ Soroban Explorer
+      </NavLink>
+      <NavLink
+        to="/bets"
+        style={({ isActive }) => ({
+          whiteSpace: "nowrap",
+          color: isActive ? "var(--accent)" : "inherit",
+          borderBottom: isActive ? "2px solid var(--accent)" : "none",
+          paddingBottom: isActive ? "4px" : "0px",
+        })}
+      >
+        Bets
+      </NavLink>
+      <form onSubmit={search} style={{ display: "flex", gap: 8, flex: 1, maxWidth: 600 }}>
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Search contract ID or wallet address…"
+          style={{ flex: 1 }}
+        />
+        <button type="submit">Search</button>
+      </form>
     <header className="nav-header">
       <div className="nav-bar">
         <NavLink

@@ -49,6 +49,9 @@ const XLM_SAC_ID = new Contract(
 
 // Unique valid contract IDs (derived from deterministic seeds) — one per test
 // so that the 60-second LRU cache in decoder.js never bleeds between tests.
+const [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) =>
+  StrKey.encodeContract(Buffer.alloc(32, i))
+);
 const [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20] = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
 ].map((i) => StrKey.encodeContract(Buffer.alloc(32, i)));
@@ -58,6 +61,7 @@ const [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C1
 // Import db first, replace getContractMeta, then import decode.
 
 import { db } from "../src/db.js";
+import { decode, buildDescription } from "../src/decoder.js";
 import { decode, fmt, evictContractMeta } from "../src/decoder.js";
 
 
@@ -198,6 +202,15 @@ describe("decode()", () => {
     assert.ok(result.description.includes("burned"), "description should say 'burned'");
   });
 
+  it("uses buildDescription for 'transfer_from'", async () => {
+    db.getContractMeta = async (id) =>
+      id === C9 ? { id: C9, name: "ContractName", functions: [{ name: "transfer_from" }] } : null;
+
+    const ev = makeRawEvent(C9, "transfer_from", [
+      scAddress(ADDR_G2),
+      scAddress(ADDR_G),
+      scAddress(ADDR_G2),
+      xdr.ScVal.scvString("100"),
   it("uses buildDescription for 'approve'", async () => {
     db.getContractMeta = async (id) =>
       id === C19 ? { id: C19, name: "Token", functions: [{ name: "approve" }] } : null;
@@ -334,6 +347,9 @@ describe("decode()", () => {
     ]);
 
     const result = await decode(ev);
+    assert.equal(result.function, "transfer_from");
+    assert.ok(result.description.includes("transferred 100 USDC to"));
+    assert.ok(result.description.includes(`(via ${ADDR_G2.slice(0, 6)}…${ADDR_G2.slice(-4)})`));
     assert.equal(result.function, "deposit");
     assert.equal(result.description, "Address GCFIRY…YOJR deposited 1000 USDC into Blend");
   });
@@ -376,6 +392,13 @@ describe("decode()", () => {
 
   it("uses buildDescription for 'burn_from'", async () => {
     db.getContractMeta = async (id) =>
+      id === C10 ? { id: C10, name: "ContractName", functions: [{ name: "burn_from" }] } : null;
+
+    const ev = makeRawEvent(C10, "burn_from", [
+      scAddress(ADDR_G2),
+      scAddress(ADDR_G),
+      xdr.ScVal.scvString("100"),
+      xdr.ScVal.scvString("USDC"),
       id === C18 ? { id: C18, name: "LendCo", functions: [{ name: "burn_from" }] } : null;
 
     const ev = makeRawEvent(C18, "burn_from", [
@@ -387,6 +410,8 @@ describe("decode()", () => {
 
     const result = await decode(ev);
     assert.equal(result.function, "burn_from");
+    assert.ok(result.description.includes("100 USDC burned from"));
+    assert.ok(result.description.includes(`(via ${ADDR_G2.slice(0, 6)}…${ADDR_G2.slice(-4)})`));
     assert.ok(result.description.includes("burned"), "description should say 'burned'");
     assert.ok(result.description.includes("via"), "description should name the spender");
     assert.ok(result.description.includes("25"), "description should include amount");
@@ -546,6 +571,43 @@ describe("fmt()", () => {
   it("returns non-matching 56-character string unchanged", () => {
     const nonAddr = "ABCDEFGHIJ1234567890123456789012345678901234567890123456";
     assert.equal(fmt(nonAddr), nonAddr);
+  });
+});
+
+describe("buildDescription()", () => {
+  const SPENDER = "GBSPENDERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const FROM    = "GAFROMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const TO      = "GCTOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+  const fmtSpender = `${SPENDER.slice(0, 6)}…${SPENDER.slice(-4)}`;
+  const fmtFrom    = `${FROM.slice(0, 6)}…${FROM.slice(-4)}`;
+  const fmtTo      = `${TO.slice(0, 6)}…${TO.slice(-4)}`;
+
+  it("describes transfer_from with owner, delegated spender, amount, token, recipient, and contract name", () => {
+    const result = buildDescription("transfer_from", [SPENDER, FROM, TO, 100, "USDC"], null, "ContractName");
+    assert.equal(
+      result,
+      `Address ${fmtFrom} (via ${fmtSpender}) transferred 100 USDC to ${fmtTo} on ContractName`
+    );
+  });
+
+  it("describes burn_from with owner, delegated spender, amount, token, and contract name", () => {
+    const result = buildDescription("burn_from", [SPENDER, FROM, 100, "USDC"], null, "ContractName");
+    assert.equal(
+      result,
+      `100 USDC burned from ${fmtFrom} (via ${fmtSpender}) on ContractName`
+    );
+  });
+
+  it("matches acceptance criteria format with short addresses", () => {
+    assert.equal(
+      buildDescription("transfer_from", ["GB…", "GA…", "GC…", 100, "USDC"], null, "ContractName"),
+      "Address GA… (via GB…) transferred 100 USDC to GC… on ContractName"
+    );
+    assert.equal(
+      buildDescription("burn_from", ["GB…", "GA…", 100, "USDC"], null, "ContractName"),
+      "100 USDC burned from GA… (via GB…) on ContractName"
+    );
   });
 });
 
